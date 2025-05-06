@@ -1,104 +1,113 @@
 <template>
-    <div class="game-container">
-      <h1>Orlog Online</h1>
-  
-      <button @click="joinGame">Dołącz do gry</button>
-      <button @click="rollDice">Rzuć kośćmi</button>
-  
-      <div v-if="store.dice.length">
-        <h2>Wynik rzutu:</h2>
-        <div class="dice-list">
-          <span v-for="(face, index) in store.dice" :key="index">{{ face }}</span>
-        </div>
-  
-        <h3>Wybierz bóstwo:</h3>
-        <div class="god-buttons">
-          <button @click="useGod('Thor')">Thor ⚡ (Atak)</button>
-          <button @click="useGod('Frigg')">Frigg 💧 (Leczenie)</button>
-          <button @click="useGod('Tyr')">Tyr 🛡️ (Obrona)</button>
+  <div>
+    <h2>Gra Orlog Online</h2>
+
+    <div v-if="!connected">
+      <p>Łączenie z serwerem...</p>
+    </div>
+
+    <div v-else>
+      <p>Twoje ID: {{ socketId }}</p>
+      <p>Obecna tura: {{ gameState.current_turn }}</p>
+
+      <div class="players">
+        <div v-for="player in gameState.players" :key="player.sid" :style="{ margin: '10px', padding: '10px', border: '1px solid #ccc' }">
+          <h3>{{ player.sid === socketId ? 'Ty' : 'Przeciwnik' }}</h3>
+          <p>HP: {{ player.hp }}</p>
+          <p>Mana: {{ player.mana }}</p>
+          <p>Statystyki tymczasowe:</p>
+          <ul>
+            <li v-for="(val, key) in player.temp_stats" :key="key">{{ key }}: {{ val }}</li>
+          </ul>
         </div>
       </div>
-  
-      <div v-if="store.selectedGod">
-        <p>Wybrane bóstwo: <strong>{{ store.selectedGod }}</strong></p>
-      </div>
-  
-      <div v-if="store.players.length">
-        <h4>Gracze w pokoju:</h4>
-        <ul>
-          <li v-for="p in store.players" :key="p">{{ p }}</li>
-        </ul>
+
+      <div style="margin-top: 20px;">
+        <button :disabled="!canRoll" @click="rollDice">Rzuć kośćmi</button>
+        <button :disabled="!canAttack" @click="attack">Atakuj</button>
       </div>
     </div>
-  </template>
-  
-  <script setup>
-  import { io } from 'socket.io-client'
-  import { onMounted } from 'vue'
-  import { useGameStore } from '../stores/counter.js'
-  
-  const store = useGameStore()
-  const socket = io('http://localhost:5000')  // Adres backendu
-  const room = 'room1'  // Identyfikator pokoju
-  
-  onMounted(() => {
-    socket.on('player_joined', (data) => {
-      store.players = data.players
-    })
-  
-    socket.on('dice_result', (data) => {
-      store.dice = data.dice
-    })
-  
-    socket.on('god_power_used', (data) => {
-      alert(`Gracz ${data.sid} użył mocy: ${data.god}`)
-    })
-  })
-  
-  function joinGame() {
-    socket.emit('join_game', { room })
+  </div>
+</template>
+
+<script>
+import { io } from "socket.io-client";
+
+export default {
+  data() {
+    return {
+      socket: null,
+      socketId: null,
+      gameState: {
+        players: [],
+        current_turn: null,
+      },
+      connected: false,
+      hasRolledDice: false,
+      room: 'game_room_1'
+    };
+  },
+  computed: {
+    me() {
+      return this.gameState.players.find(p => p.sid === this.socketId) || {};
+    },
+    canRoll() {
+      return this.socketId && this.socketId === this.gameState.current_turn && !this.hasRolledDice;
+    },
+    canAttack() {
+      return this.socketId && this.socketId === this.gameState.current_turn && this.hasRolledDice;
+    }
+  },
+  methods: {
+    rollDice() {
+      if (!this.canRoll) return;
+      this.socket.emit("roll_dice", { room: this.room });
+    },
+    attack() {
+      if (!this.canAttack) return;
+      this.socket.emit("attack", { room: this.room });
+    },
+    joinGame() {
+      this.socket.emit("join_game", { room: this.room });
+    }
+  },
+  mounted() {
+    this.socket = io("http://localhost:5000");
+    
+    this.socket.on("connect", () => {
+      this.socketId = this.socket.id;
+      this.connected = true;
+      this.joinGame();
+      console.log("Connected with socketId:", this.socketId);
+    });
+
+    this.socket.on("game_update", (data) => {
+      this.gameState = data;
+      this.hasRolledDice = false;
+
+      const me = data.players.find(p => p.sid === this.socketId);
+      if (me && me.temp_stats) {
+        const rolled = Object.values(me.temp_stats).some(v => v > 0);
+        this.hasRolledDice = rolled;
+      }
+
+      console.log("Game update:", data);
+    });
+
+    this.socket.on("dice_result", (result) => {
+      console.log("Kości:", result);
+    });
+
+    this.socket.on("error", (err) => {
+      console.error("Błąd:", err.message);
+    });
   }
-  
-  function rollDice() {
-    socket.emit('roll_dice', { room })
-  }
-  
-  function useGod(god) {
-    store.selectedGod = god
-    socket.emit('use_god_power', { room, god })
-  }
-  </script>
-  
-  <style scoped>
-  .game-container {
-    max-width: 600px;
-    margin: auto;
-    text-align: center;
-    font-family: sans-serif;
-    padding: 1rem;
-  }
-  
-  .dice-list span {
-    display: inline-block;
-    padding: 0.5rem;
-    margin: 0.3rem;
-    background: #f0f0f0;
-    border-radius: 5px;
-    font-weight: bold;
-  }
-  
-  .god-buttons button {
-    margin: 0.5rem;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 6px;
-    background-color: #ececec;
-    cursor: pointer;
-    font-weight: bold;
-  }
-  
-  .god-buttons button:hover {
-    background-color: #ddd;
-  }
-  </style>
-  
+};
+</script>
+
+<style scoped>
+button[disabled] {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+</style>
