@@ -1,10 +1,7 @@
 <template>
-  <GameBoard
-    v-if="game"
-    :game="game"
-    :sid="sid"
-    @update-dice="updateDice"
-  />
+  <div id="app">
+    <GameBoard :socket="socket" :game="game" :sid="sid" :room="room"/>
+  </div>
 </template>
 
 <script setup>
@@ -13,33 +10,33 @@ import { io } from 'socket.io-client'
 import GameBoard from './components/GameBoard.vue'
 
 const socket = io('http://localhost:5000')
-
-const game = ref(null)
-const sid = ref(null)
-
-onMounted(() => {
-  socket.on('connect', () => {
-    sid.value = socket.id
-    socket.emit('join_game', { room: 'game_room_1' })
-  })
-
-  socket.on('game_update', (data) => {
-    console.log('[GAME_UPDATE]', data)
-    game.value = data
-  })
-
-  socket.on('dice_result', (data) => {
-    updateDice(data)
-  })
-
-  socket.on('error', (data) => {
-    console.error('[ERROR]', data)
-  })
+const game = ref({
+  room: 'game_room_1',
+  players: {},
+  current_turn: null,
+  dice: [],
+  hp: {},
+  mana: {},
+  round: 1,
 })
 
-const updateDice = (diceData) => {
-  if (game.value) {
-    game.value.dice = diceData
-  }
-}
+const sid = ref('QqcjB5myFsAquX_dAAAB') // SID gracza
+const room = ref('game_room_1') // Pokój gry
+
+onMounted(() => {
+  socket.on('game_update', (data) => {
+    game.value = data
+    console.log('[GAME_UPDATE]', game.value)
+  })
+
+  socket.emit('join_room', { room: room.value, client_id: sid.value })
+})
 </script>
+
+<style>
+/* Style globalne */
+#app {
+  font-family: 'Arial', sans-serif;
+  text-align: center;
+}
+</style>

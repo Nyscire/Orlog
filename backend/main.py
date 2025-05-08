@@ -1,83 +1,58 @@
-from flask import Flask, request
+from flask import Flask, render_template,request
 from flask_socketio import SocketIO, emit, join_room
 
-from Game import Game
-
 app = Flask(__name__)
+socketio = SocketIO(app)
 
-socketio = SocketIO(app, cors_allowed_origins='*')
+# Przykładowa struktura gry
+class Game:
+    def __init__(self, room):
+        self.room = room
+        self.players = {}
+        self.current_turn = None
+        self.dice = []
+        self.hp = {}
+        self.mana = {}
+        self.round = 1
 
-games = {}
+    def add_player(self, client_id, sid):
+        if client_id in self.players:
+            self.players[client_id]['sid'] = sid
+        elif len(self.players) < 2:
+            self.players[client_id] = {'sid': sid}
+            self.hp[client_id] = 100
+            self.mana[client_id] = 0
+            if len(self.players) == 2:
+                self.turn_order = list(self.players.keys())
+                self.current_turn = self.turn_order[0]
 
-@socketio.on('connect')
-def on_connect():
-    print('Client connected:', request.sid)
+    def roll_dice(self, client_id):
+        import random
+        # Losowanie kości
+        self.dice = [random.randint(1, 6) for _ in range(2)]
+        emit('game_update', {'room': self.room, 'players': self.players, 'current_turn': self.current_turn,
+                             'dice': self.dice, 'hp': self.hp, 'mana': self.mana, 'round': self.round}, room=self.room)
 
-@socketio.on('disconnect')
-def on_disconnect():
-    print('Client disconnected:', request.sid)
+game = Game('game_room_1')
 
-@socketio.on('join_game')
+@socketio.on('join_room')
 def on_join(data):
-    try:
-        room_id = data['room']
-    except KeyError:
-        emit('error', {'message': 'Room not found in data.'})
-        return
-
-    if room_id not in games:
-        games[room_id] = Game(room_id)
-
-    game = games[room_id]
-    game.add_player(request.sid)
-    join_room(room_id)
-    emit('game_update', game.to_dict(), room=room_id)
+    room = data['room']
+    client_id = data['client_id']
+    sid = request.sid
+    game.add_player(client_id, sid)
+    join_room(room)
+    emit('game_update', {'room': game.room, 'players': game.players, 'current_turn': game.current_turn,
+                         'dice': game.dice, 'hp': game.hp, 'mana': game.mana, 'round': game.round}, room=room)
 
 @socketio.on('roll_dice')
 def on_roll_dice(data):
-    try:
-        room_id = data['room']
-        sid = data['sid']
-    except KeyError:
-        emit('error', {'message': 'Missing room or sid in data.'})
-        return
-
-    if room_id in games:
-        game = games[room_id]
-        if game.current_turn == sid:
-            game.roll_dice()
-            emit('dice_result', game.dice, room=sid)
-            emit('game_update', game.to_dict(), room=room_id)
-        else:
-            emit('error', {'message': 'Not your turn.'}, room=sid)
-
-@socketio.on('attack')
-def on_attack(data):
-    try:
-        room_id = data['room']
-        sid = data['sid']
-    except KeyError:
-        emit('error', {'message': 'Missing room or sid in data.'})
-        return
-
-    if room_id in games:
-        game = games[room_id]
-        game.attack(sid)
-        emit('game_update', game.to_dict(), room=room_id)
-
-@socketio.on('drain_mana')
-def on_drain_mana(data):
-    try:
-        room_id = data['room']
-        sid = data['sid']
-    except KeyError:
-        emit('error', {'message': 'Missing room or sid in data.'})
-        return
-
-    if room_id in games:
-        game = games[room_id]
-        game.drain_mana(sid)
-        emit('game_update', game.to_dict(), room=room_id)
+    room = data['room']
+    client_id = data['client_id']
+    game.roll_dice(client_id)
+    # Aktualizacja gry po rzucie kośćmi
+    emit('game_update', {'room': game.room, 'players': game.players, 'current_turn': game.current_turn,
+                         'dice': game.dice, 'hp': game.hp, 'mana': game.mana, 'round': game.round}, room=room)
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, debug=True)
