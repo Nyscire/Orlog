@@ -1,100 +1,99 @@
 import random
+from player import Player
 
 class Game:
     def __init__(self, room_id):
         self.room_id = room_id
-        self.players = {}  # client_id -> {'sid': sid}
+        self.players = []  # lista Player
         self.current_turn = None
-        self.dice = []
-        self.hp = {}
-        self.mana = {}
-        self.round = 1
-        self.turn_order = []  # kolejność client_id
+        self.dice_faces = ["axe", "arrow", "helmet", "shield", "mana_drain"]
 
     def add_player(self, sid):
-        if sid in self.players:
-            self.players[sid]['sid'] = sid
-        elif len(self.players) < 2:
-            self.players[sid] = {'sid': sid}
-            self.hp[sid] = 100
-            self.mana[sid] = 0
-            if len(self.players) == 2:
-                self.turn_order = list(self.players.keys())
-                self.current_turn = self.turn_order[0]
+        if any(p.sid == sid for p in self.players):
+            return False  # gracz już dołączony
+        if len(self.players) >= 2:
+            return False  # gra pełna
+
+        player = Player(sid)
+        self.players.append(player)
+
+        if len(self.players) == 2 and self.current_turn is None:
+            self.current_turn = self.players[0].sid  # pierwszy gracz zaczyna
+        return True
+
+    def get_player_by_sid(self, sid):
+        for player in self.players:
+            if player.sid == sid:
+                return player
+        return None
+
+    def get_opponent(self, sid):
+        for player in self.players:
+            if player.sid != sid:
+                return player
+        return None
+
+    def roll_dice_for_player(self, sid):
+        if self.current_turn != sid:
+            print(f"[ROLL] Not {sid}'s turn.")
+            return None
+
+        player = self.get_player_by_sid(sid)
+        if not player:
+            return None
+
+        player.reset_temporary_stats()
+        dice_faces = ["axe", "arrow", "helmet", "shield", "mana_drain"]
+        results = [random.choice(dice_faces) for _ in range(6)]
+
+        for face in results:
+            player.add_temporary_stat(face)
+        player.has_rolled_dice = True
+        print(f"[ROLL] Player {sid} rolled: {results}")
+        return {"sid": sid, "results": results}
 
 
-    def roll_dice(self, client_id):
-        if self.current_turn != client_id:
-            return []
+    def perform_attack(self, sid):
+        if self.current_turn != sid:
+            return False
 
-        self.dice = []
-        for _ in range(5):
-            self.dice.append({
-                'stat_type': random.choice(['arrow', 'axe', 'helmet', 'shield', 'mana'])
-            })
+        attacker = self.get_player_by_sid(sid)
+        defender = self.get_opponent(sid)
 
-        return self.dice
+        if not attacker or not defender:
+            return False
 
-    def attack(self, attacker_id):
-        if self.current_turn != attacker_id:
-            return
+        if not attacker.has_rolled_dice:
+            return False  # nie można atakować bez rzutu
 
+        # Oblicz i zadaj obrażenia
+        damage = attacker.calculate_attack_damage(defender)
+        defender.hp = max(0, defender.hp - damage)
+
+        # Wysysanie many
+        if attacker.temp_stats["mana_drain"] > 0:
+            if attacker.mana > defender.mana:
+                transfer = min(attacker.temp_stats["mana_drain"], defender.mana)
+                attacker.mana += transfer
+                defender.mana -= transfer
+
+        attacker.has_rolled_dice = False  # zakończona tura
+        self.end_turn()
+        return True
+
+    def end_turn(self):
         if len(self.players) < 2:
             return
 
-        # Zakładamy, że dice zostały ustawione wcześniej przez roll_dice
-        opponent_id = [pid for pid in self.players if pid != attacker_id][0]
-
-        stats = {'arrow': 0, 'axe': 0, 'mana': 0}
-        defense = {'shield': 0, 'helmet': 0}
-
-        for die in self.dice:
-            t = die['stat_type']
-            if t in stats:
-                stats[t] += 1
-            elif t in defense:
-                defense[t] += 1
-
-        # Atak i obrona
-        damage = 0
-        if stats['arrow'] > 0:
-            damage += max(0, stats['arrow'] - defense['shield'])
-        if stats['axe'] > 0:
-            damage += max(0, stats['axe'] - defense['helmet'])
-
-        self.hp[opponent_id] = max(0, self.hp[opponent_id] - damage)
-        self.mana[attacker_id] += stats['mana']
-
-        self.end_turn()
-
-    def drain_mana(self, client_id):
-        if self.current_turn != client_id:
-            return
-
-        self.mana[client_id] += 3
-        self.end_turn()
-
-    def end_turn(self):
-        if len(self.turn_order) < 2:
-            return
-
-        # Przechodzimy do kolejnego gracza
-        current_index = self.turn_order.index(self.current_turn)
-        next_index = (current_index + 1) % 2
-        self.current_turn = self.turn_order[next_index]
-
-        if next_index == 0:
-            self.round += 1
-
-        self.dice = []  # wyczyść kości na nową turę
+        # Zamiana tury
+        if self.current_turn == self.players[0].sid:
+            self.current_turn = self.players[1].sid
+        else:
+            self.current_turn = self.players[0].sid
 
     def to_dict(self):
         return {
-            'room': self.room_id,
-            'players': self.players,
-            'current_turn': self.current_turn,
-            'dice': self.dice,
-            'hp': self.hp,
-            'mana': self.mana,
-            'round': self.round,
+            "room_id": self.room_id,
+            "players": [p.to_dict() for p in self.players],
+            "current_turn": self.current_turn
         }

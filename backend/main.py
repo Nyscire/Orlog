@@ -1,58 +1,75 @@
-from flask import Flask, render_template,request
+from flask import Flask, request
 from flask_socketio import SocketIO, emit, join_room
+from Game import Game
 
+# Inicjalizacja aplikacji
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-# Przykładowa struktura gry
-class Game:
-    def __init__(self, room):
-        self.room = room
-        self.players = {}
-        self.current_turn = None
-        self.dice = []
-        self.hp = {}
-        self.mana = {}
-        self.round = 1
+class AppController:
+    def __init__(self):
+        self.games = {}  # room_id -> Game instance
 
-    def add_player(self, client_id, sid):
-        if client_id in self.players:
-            self.players[client_id]['sid'] = sid
-        elif len(self.players) < 2:
-            self.players[client_id] = {'sid': sid}
-            self.hp[client_id] = 100
-            self.mana[client_id] = 0
-            if len(self.players) == 2:
-                self.turn_order = list(self.players.keys())
-                self.current_turn = self.turn_order[0]
+    def create_or_get_game(self, room_id):
+        if room_id not in self.games:
+            self.games[room_id] = Game(room_id)
+        return self.games[room_id]
 
-    def roll_dice(self, client_id):
-        import random
-        # Losowanie kości
-        self.dice = [random.randint(1, 6) for _ in range(2)]
-        emit('game_update', {'room': self.room, 'players': self.players, 'current_turn': self.current_turn,
-                             'dice': self.dice, 'hp': self.hp, 'mana': self.mana, 'round': self.round}, room=self.room)
+    def add_player_to_game(self, room_id, sid):
+        game = self.create_or_get_game(room_id)
+        success = game.add_player(sid)
+        return success, game
 
-game = Game('game_room_1')
+# Globalny kontroler gry
+controller = AppController()
 
-@socketio.on('join_room')
+@socketio.on('join_game')
 def on_join(data):
-    room = data['room']
-    client_id = data['client_id']
+    room_id = data['room']
     sid = request.sid
-    game.add_player(client_id, sid)
-    join_room(room)
-    emit('game_update', {'room': game.room, 'players': game.players, 'current_turn': game.current_turn,
-                         'dice': game.dice, 'hp': game.hp, 'mana': game.mana, 'round': game.round}, room=room)
+    success, game = controller.add_player_to_game(room_id, sid)
+    print(f"[JOIN] SID: {sid} joined room {room_id}, success: {success}")
+    print(f"[DEBUG] Player count: {len(game.players)}, current_turn: {game.current_turn}")
+    if success:
+        join_room(room_id)
+        emit('game_update', game.to_dict(), room=room_id)
+    else:
+        emit('error', {'message': 'Game is full or player already joined.'})
+
 
 @socketio.on('roll_dice')
-def on_roll_dice(data):
-    room = data['room']
-    client_id = data['client_id']
-    game.roll_dice(client_id)
-    # Aktualizacja gry po rzucie kośćmi
-    emit('game_update', {'room': game.room, 'players': game.players, 'current_turn': game.current_turn,
-                         'dice': game.dice, 'hp': game.hp, 'mana': game.mana, 'round': game.round}, room=room)
+def on_roll(data):
+    room_id = data['room']
+    sid = request.sid
+    game = controller.create_or_get_game(room_id)
+    result = game.roll_dice_for_player(sid)
+    if result:
+        emit('dice_result', result, room=room_id)
+        emit('game_update', game.to_dict(), room=room_id)  # <== TO JEST KLUCZOWE
+    else:
+        emit('error', {'message': 'Invalid player or room.'})
 
+
+@socketio.on('attack')
+def on_attack(data):
+    room_id = data['room']
+    sid = request.sid
+    game = controller.create_or_get_game(room_id)
+    if game.perform_attack(sid):
+        emit('game_update', game.to_dict(), room=room_id)
+    else:
+        emit('error', {'message': 'Attack failed or not your turn.'})
+
+@socketio.on('drain_mana')
+def on_drain_mana(data):
+    room_id = data['room']
+    sid = request.sid
+    game = controller.create_or_get_game(room_id)
+    if game.drain_mana(sid):
+        emit('game_update', game.to_dict(), room=room_id)
+    else:
+        emit('error', {'message': 'Mana drain failed or not your turn.'})
+
+# Uruchomienie serwera
 if __name__ == '__main__':
-    socketio.run(app, debug=True)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
