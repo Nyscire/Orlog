@@ -1,113 +1,231 @@
 <template>
-  <div>
-    <h2>Gra Orlog Online</h2>
-
-    <div v-if="!connected">
-      <p>Łączenie z serwerem...</p>
+  <div class="game-container">
+    <div v-if="!playerName" class="name-entry">
+      <input v-model="tempName" placeholder="Podaj swoją nazwę" />
+      <button @click="submitName">Zatwierdź</button>
     </div>
 
-    <div v-else>
-      <p>Twoje ID: {{ socketId }}</p>
-      <p>Obecna tura: {{ gameState.current_turn }}</p>
-
-      <div class="players">
-        <div v-for="player in gameState.players" :key="player.sid" :style="{ margin: '10px', padding: '10px', border: '1px solid #ccc' }">
-          <h3>{{ player.sid === socketId ? 'Ty' : 'Przeciwnik' }}</h3>
-          <p>HP: {{ player.hp }}</p>
-          <p>Mana: {{ player.mana }}</p>
-          <p>Statystyki tymczasowe:</p>
-          <ul>
-            <li v-for="(val, key) in player.temp_stats" :key="key">{{ key }}: {{ val }}</li>
-          </ul>
+    <div v-else class="game-interface">
+      <!-- Oponent -->
+      <div class="player-section opponent compact-layout">
+        <div class="dice-and-gods">
+          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" :gods="opponent.gods" />
+          <GodsDisplay :gods="opponent.gods" :readonly="true" />
+        </div>
+        <div class="actions-and-stats">
+          <DiceDisplay :dice="opponent.rolled_dice" title="Kości przeciwnika" />
         </div>
       </div>
 
-      <div style="margin-top: 20px;">
-        <button :disabled="!canRoll" @click="rollDice">Rzuć kośćmi</button>
-        <button :disabled="!canAttack" @click="attack">Atakuj</button>
+      <!-- Strefa neutralna -->
+      <div class="neutral-section">
+        <h3>Aktualna tura: {{ data.current_move }}</h3>
+
+        <div class="neutral-dice">
+          <div>
+            <h4>Kości zapisane przeciwnika</h4>
+            <DiceDisplay :dice="opponent.saved_dice" title="" />
+          </div>
+
+          <div>
+            <h4>Wybrany bóg przeciwnika</h4>
+            <GodsDisplay :gods="[opponent.chosen_god]" :readonly="true" />
+          </div>
+
+          <div>
+            <h4>Kości zapisane gracza</h4>
+            <DiceDisplay :dice="player.saved_dice" title="" />
+          </div>
+
+          <div>
+            <h4>Wybrany bóg</h4>
+            <GodsDisplay :gods="[player.chosen_god]" :readonly="true" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Gracz -->
+      <div class="player-section self compact-layout">
+        <div class="dice-and-gods">
+          <DiceDisplay
+            :dice="player.rolled_dice"
+            title="Wylosowane Kości"
+            :selectable="isMyTurn"
+            @toggle-selection="toggleDieSelection"
+          />
+          <GodsDisplay
+            :gods="player.gods"
+            :readonly="!isMyTurn"
+            @choose-god="chooseGod"
+          />
+        </div>
+
+        <div class="actions-and-stats">
+          <div v-if="isMyTurn">
+            <button @click="confirmDice">Zatwierdź</button>
+          </div>
+          <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" :gods="player.gods" />
+        </div>
+      </div>
+
+      <!-- Debug -->
+      <div class="debug-controls">
+        <button @click="toggleStage">Przełącz etap gry (DEBUG)</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { io } from "socket.io-client";
+import PlayerStats from './PlayerStats.vue'
+import DiceDisplay from './DiceDisplay.vue'
+import GodsDisplay from './GodsDisplay.vue'
+import GodsList from './GodsList.vue'
 
 export default {
+  components: { PlayerStats, DiceDisplay, GodsDisplay, GodsList },
   data() {
     return {
-      socket: null,
-      socketId: null,
-      gameState: {
-        players: [],
-        current_turn: null,
-      },
-      connected: false,
-      hasRolledDice: false,
-      room: 'game_room_1'
-    };
+      tempName: '',
+      playerName: '',
+      data: {},
+      selectedDiceIndexes: []
+    }
   },
   computed: {
-    me() {
-      return this.gameState.players.find(p => p.sid === this.socketId) || {};
+    player() {
+      return this.data.players?.find(p => p.name === this.playerName) || {}
     },
-    canRoll() {
-      return this.socketId && this.socketId === this.gameState.current_turn && !this.hasRolledDice;
+    opponent() {
+      return this.data.players?.find(p => p.name !== this.playerName) || {}
     },
-    canAttack() {
-      return this.socketId && this.socketId === this.gameState.current_turn && this.hasRolledDice;
+    isMyTurn() {
+      return this.data.current_move === this.playerName
+    },
+    stage() {
+      return this.data.stage
     }
   },
   methods: {
-    rollDice() {
-      if (!this.canRoll) return;
-      this.socket.emit("roll_dice", { room: this.room });
+    submitName() {
+      this.playerName = this.tempName
+      this.loadMockData()
     },
-    attack() {
-      if (!this.canAttack) return;
-      this.socket.emit("attack", { room: this.room });
-    },
-    joinGame() {
-      this.socket.emit("join_game", { room: this.room });
-    }
-  },
-  mounted() {
-    this.socket = io("http://localhost:5000");
-    
-    this.socket.on("connect", () => {
-      this.socketId = this.socket.id;
-      this.connected = true;
-      this.joinGame();
-      console.log("Connected with socketId:", this.socketId);
-    });
-
-    this.socket.on("game_update", (data) => {
-      this.gameState = data;
-      this.hasRolledDice = false;
-
-      const me = data.players.find(p => p.sid === this.socketId);
-      if (me && me.temp_stats) {
-        const rolled = Object.values(me.temp_stats).some(v => v > 0);
-        this.hasRolledDice = rolled;
+    loadMockData() {
+      this.data = {
+        players: [
+          {
+            name: this.playerName,
+            HP: 100,
+            Mana: 3,
+            rolled_dice: [
+              { stat: 'helmet', gives_mana: false },
+              { stat: 'mana', gives_mana: true }
+            ],
+            saved_dice: [],
+            gods: [
+              { name: 'thor', description: 'Bóg piorunów' },
+              { name: 'loki', description: 'Bóg podziemi' }
+            ],
+            chosen_god: null
+          },
+          {
+            name: 'Bot',
+            HP: 80,
+            Mana: 5,
+            rolled_dice: [
+              { stat: 'axe', gives_mana: false }
+            ],
+            saved_dice: [],
+            gods: [
+              { name: 'odin', description: 'Bóg wojny' },
+              { name: 'heimdall', description: 'Bóg słońca' }
+            ],
+            chosen_god: null
+          }
+        ],
+        current_move: this.playerName,
+        winner: null,
+        stage: 'gods'
       }
-
-      console.log("Game update:", data);
-    });
-
-    this.socket.on("dice_result", (result) => {
-      console.log("Kości:", result);
-    });
-
-    this.socket.on("error", (err) => {
-      console.error("Błąd:", err.message);
-    });
+    },
+    toggleDieSelection(index) {
+      const pos = this.selectedDiceIndexes.indexOf(index)
+      if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)
+      else this.selectedDiceIndexes.push(index)
+    },
+    confirmDice() {
+      const selectedDice = this.player.rolled_dice.filter((_, i) =>
+        this.selectedDiceIndexes.includes(i)
+      )
+      this.player.saved_dice.push(...selectedDice)
+      this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
+        !this.selectedDiceIndexes.includes(i)
+      )
+      this.selectedDiceIndexes = []
+    },
+    chooseGod(godName) {
+      this.player.chosen_god = this.player.gods.find(g => g.name === godName)
+    },
+    toggleStage() {
+      this.data.stage = this.data.stage === 'dice' ? 'gods' : 'dice'
+    }
   }
-};
+}
 </script>
 
 <style scoped>
-button[disabled] {
-  background-color: #ccc;
-  cursor: not-allowed;
+.game-container {
+  padding: 1rem;
+}
+.name-entry {
+  text-align: center;
+  margin-top: 2rem;
+}
+.player-section {
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.compact-layout {
+  flex-direction: row;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.dice-and-gods {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.actions-and-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+.opponent {
+  border-bottom: 2px dashed #ccc;
+  padding-bottom: 1rem;
+}
+.self {
+  border-top: 2px dashed #ccc;
+  padding-top: 1rem;
+}
+.neutral-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+}
+.neutral-dice {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 1rem;
 }
 </style>

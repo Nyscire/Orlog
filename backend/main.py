@@ -1,6 +1,6 @@
 from flask import Flask, request
 from flask_socketio import SocketIO, emit, join_room
-from Game import Game
+from game import Game
 
 # Inicjalizacja aplikacji
 app = Flask(__name__)
