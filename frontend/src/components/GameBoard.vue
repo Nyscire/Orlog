@@ -8,45 +8,66 @@
     <div v-else class="game-interface">
       <!-- Oponent -->
       <div class="player-section opponent compact-layout">
-        <div class="dice-and-gods">
-          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" :gods="opponent.gods" />
-          <GodsDisplay :gods="opponent.gods" :readonly="true" />
-        </div>
-        <div class="actions-and-stats">
-          <DiceDisplay :dice="opponent.rolled_dice" title="Kości przeciwnika" />
+        <div class="horizontal-group">
+          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana"/>
+          <DiceDisplay
+            :dice="opponent.rolled_dice"
+            title="Kości przeciwnika"
+            :selectable="false"
+            @toggle-selection="toggleDieSelection"
+          />
+          <GodsDisplay
+            :gods="opponent.gods"
+            :readonly="!isMyTurn"
+            @choose-god="chooseGod"
+          />
         </div>
       </div>
 
       <!-- Strefa neutralna -->
       <div class="neutral-section">
-        <h3>Aktualna tura: {{ data.current_move }}</h3>
+  <h3>Aktualna tura: {{ data.current_move }}</h3>
+  <div class="neutral-dice">
+    <div class="neutral-block">
+      <h4>Kości zapisane przeciwnika</h4>
+      <DiceDisplay :dice="opponent.saved_dice" title="" />
+    </div>
 
-        <div class="neutral-dice">
-          <div>
-            <h4>Kości zapisane przeciwnika</h4>
-            <DiceDisplay :dice="opponent.saved_dice" title="" />
-          </div>
+    <div class="neutral-block">
+      <h4>Wybrany bóg przeciwnika</h4>
+      <GodsDisplay
+        v-if="opponent.chosen_god && opponent.chosen_god.name"
+        :gods="[{ ...opponent.chosen_god, selected: true }]"
+        :readonly="true"
+      />
+    </div>
 
-          <div>
-            <h4>Wybrany bóg przeciwnika</h4>
-            <GodsDisplay :gods="[opponent.chosen_god]" :readonly="true" />
-          </div>
+    <div class="neutral-block">
+      <h4>Wybrany bóg</h4>
+      <GodsDisplay
+        v-if="player.chosen_god && player.chosen_god.name"
+        :gods="[{ ...player.chosen_god, selected: true }]"
+        :readonly="true"
+      />
+    </div>
 
-          <div>
-            <h4>Kości zapisane gracza</h4>
-            <DiceDisplay :dice="player.saved_dice" title="" />
-          </div>
+    <div class="neutral-block">
+      <h4>Kości zapisane gracza</h4>
+      <DiceDisplay :dice="player.saved_dice" title="" />
+    </div>
+  </div>
+</div>
 
-          <div>
-            <h4>Wybrany bóg</h4>
-            <GodsDisplay :gods="[player.chosen_god]" :readonly="true" />
-          </div>
-        </div>
-      </div>
 
       <!-- Gracz -->
       <div class="player-section self compact-layout">
-        <div class="dice-and-gods">
+        <div class="horizontal-group">
+          <div class="actions-and-stats">
+            <div v-if="isMyTurn">
+              <button @click="confirmDice">Zatwierdź</button>
+            </div>
+            <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana"  />
+          </div>
           <DiceDisplay
             :dice="player.rolled_dice"
             title="Wylosowane Kości"
@@ -58,13 +79,6 @@
             :readonly="!isMyTurn"
             @choose-god="chooseGod"
           />
-        </div>
-
-        <div class="actions-and-stats">
-          <div v-if="isMyTurn">
-            <button @click="confirmDice">Zatwierdź</button>
-          </div>
-          <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" :gods="player.gods" />
         </div>
       </div>
 
@@ -120,7 +134,11 @@ export default {
             Mana: 3,
             rolled_dice: [
               { stat: 'helmet', gives_mana: false },
-              { stat: 'mana', gives_mana: true }
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
             ],
             saved_dice: [],
             gods: [
@@ -136,7 +154,14 @@ export default {
             rolled_dice: [
               { stat: 'axe', gives_mana: false }
             ],
-            saved_dice: [],
+            saved_dice: [
+              { stat: 'helmet', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
+            ],
             gods: [
               { name: 'odin', description: 'Bóg wojny' },
               { name: 'heimdall', description: 'Bóg słońca' }
@@ -183,10 +208,15 @@ export default {
   margin-top: 2rem;
 }
 .player-section {
-  margin: 2rem 0;
+  margin: 1rem 0;
+  width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 1rem;
+  flex-shrink: 0;
 }
 .compact-layout {
   flex-direction: row;
@@ -194,18 +224,29 @@ export default {
   flex-wrap: wrap;
   gap: 1rem;
 }
+.horizontal-group {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  align-items: flex-start;
+  justify-content: space-around;
+  width: 100%;
+}
+.actions-and-stats,
 .dice-and-gods {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
+  max-width: 33%;
+}
+.dice-and-gods {
+  align-items: flex-start;
 }
 .actions-and-stats {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
+  align-items: flex-start;
 }
 .opponent {
   border-bottom: 2px dashed #ccc;
@@ -223,9 +264,31 @@ export default {
 }
 .neutral-dice {
   display: flex;
-  gap: 2rem;
-  flex-wrap: wrap;
+  flex-direction: row;
   justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: nowrap;
   margin-top: 1rem;
+  width: 100%;
+  overflow-x: auto;
+  height: 250px;
+}
+.neutral-block {
+  min-width: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.dice-and-gods,
+.neutral-dice {
+  min-width: 280px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.dice-container > * {
+  flex: 0 0 auto;
+  margin: 0.25rem;
 }
 </style>

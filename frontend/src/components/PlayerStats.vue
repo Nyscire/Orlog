@@ -5,15 +5,7 @@
       <div class="stat hp">HP: {{ hp }}</div>
       <div class="stat mana">Mana: {{ mana }}</div>
     </div>
-    <div class="gods-icons">
-      <img
-        v-for="god in gods"
-        :key="god.name"
-        :src="`/img/icons/${god.name}.svg`"
-        :alt="god.name"
-        class="god-icon"
-      />
-    </div>
+    
   </div>
 </template>
 
@@ -23,7 +15,6 @@ export default {
   name: String,
   hp: Number,
   mana: Number,
-  gods: Array
 }
 
 }

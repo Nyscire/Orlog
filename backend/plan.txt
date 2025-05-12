@@ -126,51 +126,81 @@ god={
 
     <div v-else class="game-interface">
       <!-- Oponent -->
-      <div class="player-section opponent">
-        <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" :gods="opponent.gods" />
-        <div v-if="stage === 'dice'">
-          <DiceDisplay :dice="opponent.saved_dice" title="Zapisane Kości" />
-          <DiceDisplay :dice="opponent.rolled_dice" title="Wylosowane Kości" />
-        </div>
-        <div v-else-if="stage === 'gods'">
-          <GodsDisplay :gods="opponent.gods" :chosenGod="opponent.chosen_god" :readonly="true" />
+
+    <div class="player-section opponent compact-layout">
+      <div class="actions-and-stats">
+              <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" :gods="opponent.gods" />
+            </div>
+            <div class="dice-and-gods">
+              <DiceDisplay
+                :dice="opponent.rolled_dice"
+                title="Kości przeciwnika"
+                :selectable="false"
+                @toggle-selection="toggleDieSelection"
+              />
+              <GodsDisplay
+                :gods="opponent.gods"
+                :readonly="!isMyTurn"
+                @choose-god="chooseGod"
+              />
+            </div>
+
+            
+          </div>
+
+      <!-- Strefa neutralna -->
+      <div class="neutral-section">
+        <h3>Aktualna tura: {{ data.current_move }}</h3>
+
+        <div class="neutral-dice">
+          <div class="neutral-block">
+            <h4>Kości zapisane przeciwnika</h4>
+            <DiceDisplay :dice="opponent.saved_dice" title="" />
+          </div>
+
+          <div class="neutral-block">
+            <h4>Wybrany bóg przeciwnika</h4>
+            <GodsDisplay :gods="[opponent.chosen_god]" :readonly="true" />
+          </div>
+
+          <div class="neutral-block">
+            <h4>Wybrany bóg</h4>
+            <GodsDisplay :gods="[player.chosen_god]" :readonly="true" />
+          </div>
+
+          <div class="neutral-block">
+            <h4>Kości zapisane gracza</h4>
+            <DiceDisplay :dice="player.saved_dice" title="" />
+          </div>
         </div>
       </div>
 
       <!-- Gracz -->
-      <div class="player-section self">
-        <div v-if="stage === 'dice'">
-          <DiceDisplay
-            :dice="player.saved_dice"
-            title="Zapisane Kości"
-            :selectable="false"
-          />
-          <DiceDisplay
-          :dice="player.rolled_dice"
-          title="Wylosowane Kości"
-          :selectable="isMyTurn"
-          :selectedIndexes="selectedDiceIndexes"
-          @toggle-selection="toggleDieSelection"
-/>
-
-
+      <div class="player-section self compact-layout">
+        <div class="dice-and-gods">
+          <div class="actions-and-stats">
           <div v-if="isMyTurn">
             <button @click="confirmDice">Zatwierdź</button>
           </div>
+          <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" :gods="player.gods" />
         </div>
-
-        <div v-else-if="stage === 'gods'">
+          <DiceDisplay
+            :dice="player.rolled_dice"
+            title="Wylosowane Kości"
+            :selectable="isMyTurn"
+            @toggle-selection="toggleDieSelection"
+          />
           <GodsDisplay
             :gods="player.gods"
-            :chosenGod="player.chosen_god"
             :readonly="!isMyTurn"
             @choose-god="chooseGod"
           />
         </div>
 
-        <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" :gods="player.gods" />
+        
       </div>
-      <!-- Tymczasowy przycisk zmiany etapu -->
+
+      <!-- Debug -->
       <div class="debug-controls">
         <button @click="toggleStage">Przełącz etap gry (DEBUG)</button>
       </div>
@@ -182,9 +212,10 @@ god={
 import PlayerStats from './PlayerStats.vue'
 import DiceDisplay from './DiceDisplay.vue'
 import GodsDisplay from './GodsDisplay.vue'
+import GodsList from './GodsList.vue'
 
 export default {
-  components: { PlayerStats, DiceDisplay, GodsDisplay },
+  components: { PlayerStats, DiceDisplay, GodsDisplay, GodsList },
   data() {
     return {
       tempName: '',
@@ -213,7 +244,6 @@ export default {
       this.loadMockData()
     },
     loadMockData() {
-      // dane testowe
       this.data = {
         players: [
           {
@@ -222,12 +252,15 @@ export default {
             Mana: 3,
             rolled_dice: [
               { stat: 'helmet', gives_mana: false },
-              { stat: 'mana', gives_mana: true }
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
             ],
             saved_dice: [],
             gods: [
               { name: 'thor', description: 'Bóg piorunów' },
-              { name: 'odin', description: 'Bóg wojny' },
               { name: 'loki', description: 'Bóg podziemi' }
             ],
             chosen_god: null
@@ -239,29 +272,31 @@ export default {
             rolled_dice: [
               { stat: 'axe', gives_mana: false }
             ],
-            saved_dice: [],
+            saved_dice: [
+              { stat: 'helmet', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
+            ],
             gods: [
               { name: 'odin', description: 'Bóg wojny' },
-              { name: 'heimdall', description: 'Bóg słońca' },
-              { name: 'loki', description: 'Bóg podziemi' }
+              { name: 'heimdall', description: 'Bóg słońca' }
             ],
             chosen_god: null
           }
         ],
         current_move: this.playerName,
         winner: null,
-        stage: 'gods' // lub 'dice'
+        stage: 'gods'
       }
     },
     toggleDieSelection(index) {
-        const pos = this.selectedDiceIndexes.indexOf(index)
-        if (pos >= 0) {
-          this.selectedDiceIndexes.splice(pos, 1)
-        } else {
-          this.selectedDiceIndexes.push(index)
-        }
-      },
-
+      const pos = this.selectedDiceIndexes.indexOf(index)
+      if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)
+      else this.selectedDiceIndexes.push(index)
+    },
     confirmDice() {
       const selectedDice = this.player.rolled_dice.filter((_, i) =>
         this.selectedDiceIndexes.includes(i)
@@ -291,10 +326,38 @@ export default {
   margin-top: 2rem;
 }
 .player-section {
-  margin: 2rem 0;
+  margin: 1rem 0;
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: nowrap;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+.compact-layout {
+  flex-direction: row;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.dice-and-gods,
+.actions-and-stats {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.5rem;
+  max-width: 50%;
+}
+.dice-and-gods {
+  align-items: flex-start;
+}
+
+.actions-and-stats {
+  align-items: flex-start;
 }
 .opponent {
   border-bottom: 2px dashed #ccc;
@@ -303,5 +366,61 @@ export default {
 .self {
   border-top: 2px dashed #ccc;
   padding-top: 1rem;
+}
+.neutral-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 2rem 0;
+}
+.neutral-dice {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: nowrap; /* NIE POZWALAJ na zawijanie w dół */
+  margin-top: 1rem;
+  width: 100%;
+  overflow-x: auto; /* pozwól 
+  przewijać poziomo, jeśli za wąsko */
+}
+.neutral-slot {
+  flex: 1 1 200px;
+  min-width: 150px;
+  max-width: 250px;
+  text-align: center;
+}
+
+.neutral-block {
+  
+  min-width: 200px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Kontenery z kośćmi */
+.dice-and-gods, .neutral-dice {
+  min-width: 280px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.dice-and-gods .dice-container,
+.neutral-dice .dice-container {
+  min-height: 60px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+/* Uniknięcie skoków szerokości */
+.dice-container > * {
+  flex: 0 0 auto;
+  margin: 0.25rem;
 }
 </style>

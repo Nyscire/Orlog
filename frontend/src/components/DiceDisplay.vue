@@ -1,83 +1,59 @@
 <template>
-  <div class="dice-container">
-    <div
-      v-for="(die, index) in dice"
-      :key="index"
-      :class="['die', { selected: isSelected(index), mana: die.gives_mana }]"
-      @click="toggleSelection(index)"
-    >
-      <img :src="getDieIcon(die.stat)" :alt="die.stat" />
+  <div class="dice-display">
+    <h4 v-if="title">{{ title }}</h4>
+    <div class="dice-grid">
+      <Die
+        v-for="(die, index) in dice"
+        :key="index"
+        :die="die"
+        :selectable="selectable"
+        :selected="isSelected(index)"
+        @click="toggleSelection(index)"
+      />
     </div>
   </div>
 </template>
 
 <script>
+import Die from './Die.vue'
+
 export default {
   props: {
-    dice: { type: Array, required: true },
+    dice: {
+      type: Array,
+      required: true
+    },
     title: String,
-    selectable: { type: Boolean, default: false }
+    selectable: Boolean,
+    selectedIndexes: Array
   },
   emits: ['toggle-selection'],
-  data() {
-    return {
-      selectedIndexes: []
-    }
-  },
+  components: { Die },
   methods: {
-    toggleSelection(index) {
-      if (!this.selectable) return
-      this.$emit('toggle-selection', index)
-    },
     isSelected(index) {
-      return this.selectable && this.$parent.selectedDiceIndexes?.includes(index)
+      return this.selectedIndexes?.includes(index)
     },
-    getDieIcon(stat) {
-      return `/img/icons/${stat}.svg`
+    toggleSelection(index) {
+      if (this.selectable) {
+        this.$emit('toggle-selection', index)
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-.dice-container {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin: 1rem 0;
-}
-
-.die {
-  width: 64px;
-  height: 64px;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 4px;
-  cursor: pointer;
-  transition: border-color 0.2s;
-}
-
-.die img {
+.dice-display {
   width: 100%;
-  height: 100%;
-  object-fit: contain;
+  max-width: 350px;
+  margin: 0 auto;
 }
 
-/* tylko mana */
-.die.mana {
-  border-color: black;
+.dice-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  gap: 0.5rem;
+  justify-items: center;
+  transition: all 0.2s ease;
 }
-
-/* tylko selected */
-.die.selected {
-  border-color: red;
-}
-
-/* mana + selected = fioletowy */
-.die.mana.selected {
-  box-shadow: 0 0 0 3px black;
-  border-color:black ;
-}
-
 </style>
