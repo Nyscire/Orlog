@@ -32,19 +32,43 @@ export default {
   border-radius: 8px;
   background-color: #f0f0f0;
   box-sizing: border-box;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition: border-color 0.2s, background-color 0.2s, box-shadow 0.2s;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
+
+/* Zaznaczona kość */
 .die.selected {
-  border-color: blue;
+  outline: 3px solid #959595;
+  filter: brightness(1.1);
 }
+.selection-mark {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 1rem;
+}
+
+
+
+/* Kość z maną */
 .die.mana {
-  background-color: #e0ffe0;
+  border: 2px dashed #28a745;
+  background-color: #e6ffec;
 }
-img {
-  max-width: 100%;
-  max-height: 100%;
+
+/* Opcjonalna ikonka many */
+.die.mana::after {
+  content: '🪄';
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  font-size: 14px;
+  background: white;
+  border-radius: 50%;
+  padding: 2px;
+  box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
 }
 </style>

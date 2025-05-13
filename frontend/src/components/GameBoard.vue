@@ -26,54 +26,58 @@
 
       <!-- Strefa neutralna -->
       <div class="neutral-section">
-  <h3>Aktualna tura: {{ data.current_move }}</h3>
-  <div class="neutral-dice">
-    <div class="neutral-block">
-      <h4>Kości zapisane przeciwnika</h4>
-      <DiceDisplay :dice="opponent.saved_dice" title="" />
-    </div>
+        <h3>Aktualna tura: {{ data.current_move }}</h3>
+        <div class="neutral-dice">
+          <div class="neutral-block">
+            <h4>Kości zapisane przeciwnika</h4>
+            <DiceDisplay :dice="opponent.saved_dice" title="" />
+          </div>
 
-    <div class="neutral-block">
-      <h4>Wybrany bóg przeciwnika</h4>
-      <GodsDisplay
-        v-if="opponent.chosen_god && opponent.chosen_god.name"
-        :gods="[{ ...opponent.chosen_god, selected: true }]"
-        :readonly="true"
-      />
-    </div>
+          <div class="neutral-block">
+            <h4>Wybrany bóg przeciwnika</h4>
+            <GodsDisplay
+              v-if="opponent.chosen_god && opponent.chosen_god.name"
+              :gods="[{ ...opponent.chosen_god, selected: true }]"
+              :readonly="true"
+            />
+          </div>
 
-    <div class="neutral-block">
-      <h4>Wybrany bóg</h4>
-      <GodsDisplay
-        v-if="player.chosen_god && player.chosen_god.name"
-        :gods="[{ ...player.chosen_god, selected: true }]"
-        :readonly="true"
-      />
-    </div>
+          <div class="neutral-block">
+            <h4>Wybrany bóg</h4>
+            <GodsDisplay
+              v-if="player.chosen_god && player.chosen_god.name"
+              :gods="[{ ...player.chosen_god, selected: true }]"
+              :readonly="true"
+            />
+          </div>
 
-    <div class="neutral-block">
-      <h4>Kości zapisane gracza</h4>
-      <DiceDisplay :dice="player.saved_dice" title="" />
-    </div>
-  </div>
-</div>
-
+          <div class="neutral-block">
+            <h4>Kości zapisane gracza</h4>
+            <DiceDisplay :dice="player.saved_dice" title="" />
+          </div>
+        </div>
+      </div>
 
       <!-- Gracz -->
       <div class="player-section self compact-layout">
         <div class="horizontal-group">
           <div class="actions-and-stats">
-            <div v-if="isMyTurn">
-              <button @click="confirmDice">Zatwierdź</button>
-            </div>
             <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana"  />
           </div>
-          <DiceDisplay
-            :dice="player.rolled_dice"
-            title="Wylosowane Kości"
-            :selectable="isMyTurn"
-            @toggle-selection="toggleDieSelection"
-          />
+
+          <div class="dice-section">
+            <DiceDisplay
+              :dice="player.rolled_dice"
+              title="Wylosowane Kości"
+              :selectable="isMyTurn"
+              :selected-indexes="selectedDiceIndexes"
+              @toggle-selection="toggleDieSelection"
+            />
+            <div v-if="isMyTurn" class="confirm-dice-wrapper">
+              <button class="confirm-dice-button" @click="confirmDice">Zatwierdź</button>
+            </div>
+          </div>
+
           <GodsDisplay
             :gods="player.gods"
             :readonly="!isMyTurn"
@@ -290,5 +294,34 @@ export default {
 .dice-container > * {
   flex: 0 0 auto;
   margin: 0.25rem;
+}
+
+.dice-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.confirm-dice-wrapper {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.confirm-dice-button {
+  background-color: #959595;
+  color: white;
+  padding: 0.6rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: background-color 0.2s ease;
+}
+
+.confirm-dice-button:hover {
+  background-color: #808080;
 }
 </style>

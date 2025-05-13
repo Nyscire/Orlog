@@ -50,10 +50,11 @@ export default {
 }
 
 .dice-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(48px, 1fr));
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: center;
   gap: 0.5rem;
-  justify-items: center;
-  transition: all 0.2s ease;
 }
 </style>
