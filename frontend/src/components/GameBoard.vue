@@ -7,9 +7,9 @@
 
     <div v-else class="game-interface">
       <!-- Oponent -->
-      <div class="player-section opponent compact-layout">
+      <div class="player-section opponent compact-layout board-section-padding">
         <div class="horizontal-group">
-          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana"/>
+          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" />
           <DiceDisplay
             :dice="opponent.rolled_dice"
             title="Kości przeciwnika"
@@ -18,14 +18,13 @@
           />
           <GodsDisplay
             :gods="opponent.gods"
-            :readonly="!isMyTurn"
-            @choose-god="chooseGod"
+            :readonly="true" 
           />
         </div>
       </div>
 
       <!-- Strefa neutralna -->
-      <div class="neutral-section">
+      <div class="neutral-section board-section-padding">
         <h3>Aktualna tura: {{ data.current_move }}</h3>
         <div class="neutral-dice">
           <div class="neutral-block">
@@ -40,6 +39,9 @@
               :gods="[{ ...opponent.chosen_god, selected: true }]"
               :readonly="true"
             />
+            <div v-if="opponent.chosen_god?.level">
+              <h3>Poziom boga przeciwnika:{{ opponent.chosen_god.level }} </h3>
+            </div>
           </div>
 
           <div class="neutral-block">
@@ -49,6 +51,9 @@
               :gods="[{ ...player.chosen_god, selected: true }]"
               :readonly="true"
             />
+            <div v-if="player.chosen_god?.level">
+              <h3>Wybrany poziom: {{ player.chosen_god.level }}</h3>
+            </div>
           </div>
 
           <div class="neutral-block">
@@ -59,10 +64,10 @@
       </div>
 
       <!-- Gracz -->
-      <div class="player-section self compact-layout">
+      <div class="player-section self compact-layout board-section-padding">
         <div class="horizontal-group">
           <div class="actions-and-stats">
-            <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana"  />
+            <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" />
           </div>
 
           <div class="dice-section">
@@ -98,10 +103,9 @@
 import PlayerStats from './PlayerStats.vue'
 import DiceDisplay from './DiceDisplay.vue'
 import GodsDisplay from './GodsDisplay.vue'
-import GodsList from './GodsList.vue'
 
 export default {
-  components: { PlayerStats, DiceDisplay, GodsDisplay, GodsList },
+  components: { PlayerStats, DiceDisplay, GodsDisplay },
   data() {
     return {
       tempName: '',
@@ -146,8 +150,8 @@ export default {
             ],
             saved_dice: [],
             gods: [
-              { name: 'thor', description: 'Bóg piorunów' },
-              { name: 'loki', description: 'Bóg podziemi' }
+              { name: 'thor', description: 'Bóg piorunów', level: null },
+              { name: 'loki', description: 'Bóg podziemi', level: null }
             ],
             chosen_god: null
           },
@@ -167,8 +171,8 @@ export default {
               { stat: 'mana', gives_mana: false },
             ],
             gods: [
-              { name: 'odin', description: 'Bóg wojny' },
-              { name: 'heimdall', description: 'Bóg słońca' }
+              { name: 'odin', description: 'Bóg wojny', level: null },
+              { name: 'heimdall', description: 'Bóg słońca', level: null }
             ],
             chosen_god: null
           }
@@ -193,8 +197,23 @@ export default {
       )
       this.selectedDiceIndexes = []
     },
-    chooseGod(godName) {
-      this.player.chosen_god = this.player.gods.find(g => g.name === godName)
+    chooseGod({ godName, level }) {
+      const god = this.player.gods.find(g => g.name === godName);
+      if (god) {
+        this.player.chosen_god = {
+          ...god,
+          level
+        };
+      }
+    },
+    chooseGodLevel({ godName, level }) {
+      const god = this.player.gods.find(g => g.name === godName)
+      if (god) {
+        god.level = level
+        if (this.player.chosen_god && this.player.chosen_god.name === godName) {
+          this.player.chosen_god.level = level
+        }
+      }
     },
     toggleStage() {
       this.data.stage = this.data.stage === 'dice' ? 'gods' : 'dice'
@@ -222,6 +241,10 @@ export default {
   gap: 1rem;
   flex-shrink: 0;
 }
+.board-section-padding {
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
 .compact-layout {
   flex-direction: row;
   justify-content: space-around;
@@ -236,92 +259,49 @@ export default {
   justify-content: space-around;
   width: 100%;
 }
-.actions-and-stats,
-.dice-and-gods {
-  flex: 1;
-  min-width: 0;
+.actions-and-stats {
+  flex: 0 0 220px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
-  max-width: 33%;
 }
-.dice-and-gods {
-  align-items: flex-start;
-}
-.actions-and-stats {
-  align-items: flex-start;
-}
-.opponent {
-  border-bottom: 2px dashed #ccc;
-  padding-bottom: 1rem;
-}
-.self {
-  border-top: 2px dashed #ccc;
-  padding-top: 1rem;
+.dice-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .neutral-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   margin: 2rem 0;
+  border: 1px solid #ccc;
+  padding: 1rem;
+  background: #f9f9f9;
+  min-height: 450px;
 }
 .neutral-dice {
   display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: flex-start;
+  flex-wrap: wrap;
+  justify-content: space-around;
   gap: 1rem;
-  flex-wrap: nowrap;
-  margin-top: 1rem;
-  width: 100%;
-  overflow-x: auto;
-  height: 250px;
 }
 .neutral-block {
-  min-width: 200px;
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  min-width: 200px;
 }
-.dice-and-gods,
-.neutral-dice {
-  min-width: 280px;
-  width: 100%;
-  box-sizing: border-box;
-}
-.dice-container > * {
-  flex: 0 0 auto;
-  margin: 0.25rem;
-}
-
-.dice-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-}
-
 .confirm-dice-wrapper {
-  display: flex;
-  justify-content: center;
   margin-top: 0.5rem;
+  text-align: center;
 }
-
 .confirm-dice-button {
-  background-color: #959595;
-  color: white;
-  padding: 0.6rem 1.2rem;
-  font-size: 1rem;
-  border: none;
-  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  transition: background-color 0.2s ease;
 }
-
-.confirm-dice-button:hover {
-  background-color: #808080;
+.debug-controls {
+  margin-top: 2rem;
+  text-align: center;
+}
+h3,h4 {
+  text-align: center;
 }
 </style>

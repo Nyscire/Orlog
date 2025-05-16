@@ -57,4 +57,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
 }
+h3,h4 {
+  text-align: center;
+}
 </style>
