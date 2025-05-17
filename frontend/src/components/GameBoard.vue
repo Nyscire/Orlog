@@ -9,14 +9,16 @@
       <!-- Oponent -->
       <div class="player-section opponent compact-layout board-section-padding">
         <div class="horizontal-group">
+        <div class="actions-and-stats">
           <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" />
+        </div>
           <DiceDisplay
             :dice="opponent.rolled_dice"
             title="Kości przeciwnika"
             :selectable="false"
             @toggle-selection="toggleDieSelection"
           />
-          <GodsDisplay
+          <GodsOpponentDisplay
             :gods="opponent.gods"
             :readonly="true" 
           />
@@ -25,6 +27,12 @@
 
       <!-- Strefa neutralna -->
       <div class="neutral-section board-section-padding">
+        <p v-if=" data.stage==='dice'">
+          <h3>Aktualny etap: Wybór kości</h3>
+        </p>
+        <p v-else>
+          <h3>Aktualny etap: Wybór boga</h3>
+        </p>
         <h3>Aktualna tura: {{ data.current_move }}</h3>
         <div class="neutral-dice">
           <div class="neutral-block">
@@ -34,26 +42,23 @@
 
           <div class="neutral-block">
             <h4>Wybrany bóg przeciwnika</h4>
-            <GodsDisplay
+            <GodsNeutralDisplay
               v-if="opponent.chosen_god && opponent.chosen_god.name"
               :gods="[{ ...opponent.chosen_god, selected: true }]"
               :readonly="true"
+              
             />
-            <div v-if="opponent.chosen_god?.level">
-              <h3>Poziom boga przeciwnika:{{ opponent.chosen_god.level }} </h3>
-            </div>
+            
           </div>
 
           <div class="neutral-block">
             <h4>Wybrany bóg</h4>
-            <GodsDisplay
+            <GodsNeutralDisplay
               v-if="player.chosen_god && player.chosen_god.name"
               :gods="[{ ...player.chosen_god, selected: true }]"
               :readonly="true"
             />
-            <div v-if="player.chosen_god?.level">
-              <h3>Wybrany poziom: {{ player.chosen_god.level }}</h3>
-            </div>
+            
           </div>
 
           <div class="neutral-block">
@@ -74,27 +79,23 @@
             <DiceDisplay
               :dice="player.rolled_dice"
               title="Wylosowane Kości"
-              :selectable="isMyTurn"
+              :selectable="canSelectDice"
               :selected-indexes="selectedDiceIndexes"
               @toggle-selection="toggleDieSelection"
             />
-            <div v-if="isMyTurn" class="confirm-dice-wrapper">
+            <div v-if="canSelectDice" class="confirm-dice-wrapper">
               <button class="confirm-dice-button" @click="confirmDice">Zatwierdź</button>
             </div>
           </div>
 
-          <GodsDisplay
+          <GodsPlayerDisplay
             :gods="player.gods"
-            :readonly="!isMyTurn"
+            :readonly="!canSelectGod"
             @choose-god="chooseGod"
           />
         </div>
       </div>
 
-      <!-- Debug -->
-      <div class="debug-controls">
-        <button @click="toggleStage">Przełącz etap gry (DEBUG)</button>
-      </div>
     </div>
   </div>
 </template>
@@ -102,10 +103,18 @@
 <script>
 import PlayerStats from './PlayerStats.vue'
 import DiceDisplay from './DiceDisplay.vue'
-import GodsDisplay from './GodsDisplay.vue'
+import GodsPlayerDisplay from './GodsPlayerDisplay.vue'
+import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
+import GodsOpponentDisplay from './GodsOpponentDisplay.vue'
 
 export default {
-  components: { PlayerStats, DiceDisplay, GodsDisplay },
+  components: {
+    PlayerStats,
+    DiceDisplay,
+    GodsPlayerDisplay,
+    GodsOpponentDisplay,
+    GodsNeutralDisplay
+  },
   data() {
     return {
       tempName: '',
@@ -126,7 +135,13 @@ export default {
     },
     stage() {
       return this.data.stage
-    }
+    },
+    canSelectDice() {
+    return this.isMyTurn && this.stage === 'dice';
+  },
+  canSelectGod() {
+    return this.isMyTurn && this.stage === 'gods';
+  }
   },
   methods: {
     submitName() {
@@ -150,8 +165,16 @@ export default {
             ],
             saved_dice: [],
             gods: [
-              { name: 'thor', description: 'Bóg piorunów', level: null },
-              { name: 'loki', description: 'Bóg podziemi', level: null }
+              { name: 'thor', description: 'Bóg piorunów',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null },
+              { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null }
             ],
             chosen_god: null
           },
@@ -171,10 +194,22 @@ export default {
               { stat: 'mana', gives_mana: false },
             ],
             gods: [
-              { name: 'odin', description: 'Bóg wojny', level: null },
-              { name: 'heimdall', description: 'Bóg słońca', level: null }
+              { name: 'thor', description: 'Bóg piorunów\nTest1\nTest2',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null },
+              { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null }
             ],
-            chosen_god: null
+            chosen_god: { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: 1 }
           }
         ],
         current_move: this.playerName,
@@ -186,26 +221,31 @@ export default {
       const pos = this.selectedDiceIndexes.indexOf(index)
       if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)
       else this.selectedDiceIndexes.push(index)
-    },
-    confirmDice() {
-      const selectedDice = this.player.rolled_dice.filter((_, i) =>
-        this.selectedDiceIndexes.includes(i)
-      )
-      this.player.saved_dice.push(...selectedDice)
-      this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
-        !this.selectedDiceIndexes.includes(i)
-      )
-      this.selectedDiceIndexes = []
-    },
-    chooseGod({ godName, level }) {
-      const god = this.player.gods.find(g => g.name === godName);
-      if (god) {
-        this.player.chosen_god = {
-          ...god,
-          level
-        };
-      }
-    },
+    },confirmDice() {
+  if (!this.canSelectDice) return;
+
+  const selectedDice = this.player.rolled_dice.filter((_, i) =>
+    this.selectedDiceIndexes.includes(i)
+  );
+  this.player.saved_dice.push(...selectedDice);
+  this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
+    !this.selectedDiceIndexes.includes(i)
+  );
+  this.selectedDiceIndexes = [];
+},
+
+chooseGod({ godName, level }) {
+  if (!this.canSelectGod) return;
+
+  const god = this.player.gods.find(g => g.name === godName);
+  if (god) {
+    this.player.chosen_god = {
+      ...god,
+      level
+    };
+  }
+},
+
     chooseGodLevel({ godName, level }) {
       const god = this.player.gods.find(g => g.name === godName)
       if (god) {
@@ -272,11 +312,9 @@ export default {
   align-items: center;
 }
 .neutral-section {
-  margin: 2rem 0;
   border: 1px solid #ccc;
-  padding: 1rem;
+  height: 361px;;
   background: #f9f9f9;
-  min-height: 450px;
 }
 .neutral-dice {
   display: flex;

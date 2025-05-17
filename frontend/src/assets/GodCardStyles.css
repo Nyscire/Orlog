@@ -1,0 +1,103 @@
+.gods-container {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  justify-content: center;
+  height: 185px;
+}
+
+.god-card {
+  position: relative;
+  width: 180px;
+  padding: 16px;
+  border: 2px solid #ccc;
+  border-radius: 12px;
+  text-align: center;
+  background-color: #f9f9f9;
+  transition: transform 0.2s ease;
+}
+
+.god-card:hover {
+  transform: scale(1.03);
+}
+
+.god-card.selected {
+  border-color: #007BFF;
+}
+
+.god-card.disabled {
+  opacity: 0.5;
+}
+
+.god-icon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 8px;
+}
+
+.god-name {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 12px;
+}
+
+.levels {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.levels button {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  background-color: #eee;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.levels button.active {
+  background-color: #007BFF;
+  color: white;
+  border-color: #007BFF;
+}
+
+.chosen-level {
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.choose-btn {
+  margin-top: 6px;
+  padding: 6px 12px;
+  background-color: #28a745;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.choose-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.choose-btn:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.tooltip {
+  margin-top: 10px;
+  width: 180px;
+  background-color: white;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  font-size: 13px;
+  text-align: center;
+  z-index: 100;
+  padding: 8px 0;
+
+}
