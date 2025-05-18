@@ -101,6 +101,7 @@
 </template>
 
 <script>
+import socket from '../socket';
 import PlayerStats from './PlayerStats.vue'
 import DiceDisplay from './DiceDisplay.vue'
 import GodsPlayerDisplay from './GodsPlayerDisplay.vue'
@@ -143,11 +144,26 @@ export default {
     return this.isMyTurn && this.stage === 'gods';
   }
   },
+  mounted() {
+    socket.on('connect', () => {
+      console.log('Połączono z serwerem Socket.IO');
+    });
+
+    socket.on('game_state', (data) => {
+      this.updateGameState(data);
+    });
+  },
   methods: {
     submitName() {
       this.playerName = this.tempName
-      this.loadMockData()
+      
+    },updateGameState(data) {
+      // Aktualizacja stanu gry na podstawie otrzymanych danych
     },
+    sendPlayerAction(action) {
+      socket.emit('player_action', action);
+    },
+
     loadMockData() {
       this.data = {
         players: [
