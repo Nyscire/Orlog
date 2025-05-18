@@ -1,9 +1,6 @@
 <template>
   <div class="game-container">
-    <div v-if="!playerName" class="name-entry">
-      <input v-model="tempName" placeholder="Podaj swoją nazwę" />
-      <button @click="submitName">Zatwierdź</button>
-    </div>
+    <PlayerMenu v-if="!playerName" @name-submitted="submitName" />
 
     <div v-else class="game-interface">
       <!-- Oponent -->
@@ -27,12 +24,12 @@
 
       <!-- Strefa neutralna -->
       <div class="neutral-section board-section-padding">
-        <p v-if=" data.stage==='dice'">
+        <div v-if=" data.stage==='dice'">
           <h3>Aktualny etap: Wybór kości</h3>
-        </p>
-        <p v-else>
+        </div>
+        <div v-else>
           <h3>Aktualny etap: Wybór boga</h3>
-        </p>
+        </div>
         <h3>Aktualna tura: {{ data.current_move }}</h3>
         <div class="neutral-dice">
           <div class="neutral-block">
@@ -107,6 +104,8 @@ import DiceDisplay from './DiceDisplay.vue'
 import GodsPlayerDisplay from './GodsPlayerDisplay.vue'
 import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
 import GodsOpponentDisplay from './GodsOpponentDisplay.vue'
+import PlayerMenu from './PlayerMenu.vue';
+
 
 export default {
   components: {
@@ -114,7 +113,8 @@ export default {
     DiceDisplay,
     GodsPlayerDisplay,
     GodsOpponentDisplay,
-    GodsNeutralDisplay
+    GodsNeutralDisplay,
+    PlayerMenu
   },
   data() {
     return {
@@ -150,89 +150,21 @@ export default {
     });
 
     socket.on('game_state', (data) => {
-      this.updateGameState(data);
+      this.data=data
     });
   },
   methods: {
-    submitName() {
-      this.playerName = this.tempName
-      
-    },updateGameState(data) {
+    submitName(name) {
+    this.playerName = name;
+    socket.emit('submit_player_name',  name );
+}
+,updateGameState(data) {
       // Aktualizacja stanu gry na podstawie otrzymanych danych
     },
     sendPlayerAction(action) {
       socket.emit('player_action', action);
     },
 
-    loadMockData() {
-      this.data = {
-        players: [
-          {
-            name: this.playerName,
-            HP: 100,
-            Mana: 3,
-            rolled_dice: [
-              { stat: 'helmet', gives_mana: false },
-              { stat: 'mana', gives_mana: true },
-              { stat: 'shield', gives_mana: false },
-              { stat: 'mana', gives_mana: true },
-              { stat: 'arrow', gives_mana: false },
-              { stat: 'mana', gives_mana: false },
-            ],
-            saved_dice: [],
-            gods: [
-              { name: 'thor', description: 'Bóg piorunów',levels: {
-    1: 'Poziom 1: Zadaje 1 obrażenie.',
-    2: 'Poziom 2: Zadaje 2 obrażenia.',
-    3: 'Poziom 3: Zadaje 3 obrażenia.'
-  }, level: null },
-              { name: 'loki', description: 'Bóg podziemi',levels: {
-    1: 'Poziom 1: Zadaje 1 obrażenie.',
-    2: 'Poziom 2: Zadaje 2 obrażenia.',
-    3: 'Poziom 3: Zadaje 3 obrażenia.'
-  }, level: null }
-            ],
-            chosen_god: null
-          },
-          {
-            name: 'Bot',
-            HP: 80,
-            Mana: 5,
-            rolled_dice: [
-              { stat: 'axe', gives_mana: false }
-            ],
-            saved_dice: [
-              { stat: 'helmet', gives_mana: false },
-              { stat: 'mana', gives_mana: true },
-              { stat: 'shield', gives_mana: false },
-              { stat: 'mana', gives_mana: true },
-              { stat: 'arrow', gives_mana: false },
-              { stat: 'mana', gives_mana: false },
-            ],
-            gods: [
-              { name: 'thor', description: 'Bóg piorunów\nTest1\nTest2',levels: {
-    1: 'Poziom 1: Zadaje 1 obrażenie.',
-    2: 'Poziom 2: Zadaje 2 obrażenia.',
-    3: 'Poziom 3: Zadaje 3 obrażenia.'
-  }, level: null },
-              { name: 'loki', description: 'Bóg podziemi',levels: {
-    1: 'Poziom 1: Zadaje 1 obrażenie.',
-    2: 'Poziom 2: Zadaje 2 obrażenia.',
-    3: 'Poziom 3: Zadaje 3 obrażenia.'
-  }, level: null }
-            ],
-            chosen_god: { name: 'loki', description: 'Bóg podziemi',levels: {
-    1: 'Poziom 1: Zadaje 1 obrażenie.',
-    2: 'Poziom 2: Zadaje 2 obrażenia.',
-    3: 'Poziom 3: Zadaje 3 obrażenia.'
-  }, level: 1 }
-          }
-        ],
-        current_move: this.playerName,
-        winner: null,
-        stage: 'gods'
-      }
-    },
     toggleDieSelection(index) {
       const pos = this.selectedDiceIndexes.indexOf(index)
       if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)

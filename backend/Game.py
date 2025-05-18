@@ -1,8 +1,9 @@
 from player import Player
 from god import God
 from die import Die
-import json
+import random
 class Game:
+    DICES=['axe','arrow','helmet','mana','shield']
     def __init__(self) -> None:
         self.players={}
         self.can_start=False
@@ -17,10 +18,21 @@ class Game:
         self.players[player_name]=Player(player_name,[loki])
         if len(self.players)==2:
             self.can_start=True
-            self.current_move=self.players.keys
-            self.stage="dice"
+            self.current_move=next(iter(self.players))
+            self.stage="gods"
+
+
+    def roll_dice(self,player):
+        for _ in range(6):
+            stat = random.choice(self.DICES)
+            mana=random.choice([True,False])
+            player.rolled_dice.append(Die(stat,mana))
+
+    def start(self):
+        print("AKTUALNY RUCH:",self.players[self.current_move])
+        self.roll_dice(self.players[self.current_move])
+        return self.return_data()
     def return_data(self):
-        print(self.players)
         data={"players":[player.return_data() for player in self.players.values()],
               "current_move":self.current_move,
                 "stage":self.stage,
