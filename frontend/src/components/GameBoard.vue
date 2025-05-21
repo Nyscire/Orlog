@@ -30,7 +30,7 @@
         <div v-else>
           <h3>Aktualny etap: Wybór boga</h3>
         </div>
-        <h3>Aktualna tura: {{ data.current_move }}</h3>
+        <h3>Aktualna tura: {{ data.active_player }}</h3>
         <div class="neutral-dice">
           <div class="neutral-block">
             <h4>Kości zapisane przeciwnika</h4>
@@ -132,7 +132,7 @@ export default {
       return this.data.players?.find(p => p.name !== this.playerName) || {}
     },
     isMyTurn() {
-      return this.data.current_move === this.playerName
+      return this.data.active_player === this.playerName
     },
     stage() {
       return this.data.stage
@@ -169,7 +169,8 @@ export default {
       const pos = this.selectedDiceIndexes.indexOf(index)
       if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)
       else this.selectedDiceIndexes.push(index)
-    },confirmDice() {
+    },
+    confirmDice() {
   if (!this.canSelectDice) return;
 
   const selectedDice = this.player.rolled_dice.filter((_, i) =>
@@ -179,6 +180,10 @@ export default {
   this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
     !this.selectedDiceIndexes.includes(i)
   );
+  socket.emit('confirm_dice', {
+    player: this.playerName,
+    selectedIndexes: this.selectedDiceIndexes
+  });
   this.selectedDiceIndexes = [];
 },
 
@@ -192,6 +197,11 @@ chooseGod({ godName, level }) {
       level
     };
   }
+  socket.emit('choose_god', {
+    player: this.playerName,
+    godName,
+    level
+  });
 },
 
     chooseGodLevel({ godName, level }) {

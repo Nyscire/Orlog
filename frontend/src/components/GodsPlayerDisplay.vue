@@ -29,7 +29,7 @@
 
       <div class="level-description" v-if="god.level">
         <strong>Wybrany poziom {{ god.level }}:</strong>
-        <p>{{ god.levels[god.level] }}</p>
+        <p>{{ god.levels[god.level-1] }}</p>
       </div>
     </div>
   </div>
