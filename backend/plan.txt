@@ -1,0 +1,161 @@
+1. Gra czeka na dwóch graczy, po czym startuje
+2. Pierwsza runda, kieruje gracz nr1. Tury trwają póki obaj gracze mogą losować kości. 
+3. Gracze wybierają łaski bogów(jesli mogą)
+4. Kradzież many,Efekt łaski przed walką, gracz kierujący atakuje, gracz kierujący się broni, efekt łaski po walce
+5. Gracz nr2 jest kierujący, powrót do pkt 2
+
+
+I
+-głowna metoda game: init. Przypisuje graczy do listy, wyznacza kierującego i uruchamia metode play_game
+II
+-metoda game: play_game trwa tak długo jak obaj gracze mają pozytywne HP.
+-metoda klasy round: play_round->start round: trwa póki gracze mają `rolls_left`-gracz kierujący losuje kości i zatwierdza,następnie robi to drugi gracz
+*klasa round:otrzymuje numer rundy oraz listę graczy. Zaczyna od poczatku(for player in players)
+III
+-metoda klasy round:play_gods_blessing. Najpierw gracz kierujący. Obaj gracze kończą z wybranymi łaskami oraz koścmi
+IV
+-metoda game:check_for_mana_steal. Sprawdza kto ma więcej kości many, przekazuje nadmiar 
+-Metoda round:battle. Zaczynając od gracza kierującego uzywa łaski przed walką, następnie atakuje po czym się broni.
+V
+-jeśli któryś z graczy zginął koniec gry. W przeciwnym wypadku tworzy się następna runda z kolejnym numerem
+
+
+
+GANE
+1. Atrybuty
+-gracze
+-runda
+-is_winner
+-kierujący(gracze[runda%2]) w round
+-kończący(gracze[runda+1%2]) w round
+2. Metody
+-init(self,players:list)
+przypisuje atrybuty i uruchamia self.play_game
+-play_game(self)
+Póki nie ma zwycięzcy. Tworzy round, argument graczy to [player1,player2]
+-change_player_decision(self,player:Player,decision:str)
+Zmienia decyzje konkretnego gracza. 
+-check_for_mana_steal(self)
+Sprawdza któy gracz moze wykraść manę
+
+
+PLAYER
+1. Atrybuty
+-nazwa
+-HP
+-mana
+-stats
+-blessings
+-chosen_blessing
+-decision:None
+-dice
+-accepted_dice
+2. Metody
+-init
+-roll_dice
+-decide
+-attack
+-turn
+-activate_blessing
+-reset_decision
+ROUND
+1. Atrybuty
+-numer
+-gracze
+2. Metody
+-init
+-battle
+-start
+-play_gods_blessing
+
+GODS_BLESSING
+1. Atrybuty
+-wlasciciel
+2. Metody
+-get_info
+-activate
+
+
+DIE
+1. Atrybuty
+-stat
+2. Metody
+-sciezka(property)
+
+
+
+main.py
+
+Czeka na graczy, gdy będzie ich dwóch zaczyna grę game.play_game
+
+
+
+loadMockData() {
+      this.data = {
+        players: [
+          {
+            name: this.playerName,
+            HP: 100,
+            Mana: 3,
+            rolled_dice: [
+              { stat: 'helmet', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
+            ],
+            saved_dice: [],
+            gods: [
+              { name: 'thor', description: 'Bóg piorunów',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null },
+              { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null }
+            ],
+            chosen_god: null
+          },
+          {
+            name: 'Bot',
+            HP: 80,
+            Mana: 5,
+            rolled_dice: [
+              { stat: 'axe', gives_mana: false }
+            ],
+            saved_dice: [
+              { stat: 'helmet', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'shield', gives_mana: false },
+              { stat: 'mana', gives_mana: true },
+              { stat: 'arrow', gives_mana: false },
+              { stat: 'mana', gives_mana: false },
+            ],
+            gods: [
+              { name: 'thor', description: 'Bóg piorunów\nTest1\nTest2',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null },
+              { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: null }
+            ],
+            chosen_god: { name: 'loki', description: 'Bóg podziemi',levels: {
+    1: 'Poziom 1: Zadaje 1 obrażenie.',
+    2: 'Poziom 2: Zadaje 2 obrażenia.',
+    3: 'Poziom 3: Zadaje 3 obrażenia.'
+  }, level: 1 }
+          }
+        ],
+        current_move: this.playerName,
+        winner: null,
+        stage: 'gods'
+      }
+    }
