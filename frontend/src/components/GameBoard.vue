@@ -41,8 +41,8 @@
             <h4>Wybrany bóg przeciwnika</h4>
             <GodsNeutralDisplay
               v-if="opponent.chosen_god && opponent.chosen_god.name"
-              :gods="[{ ...opponent.chosen_god, selected: true }]"
-              :readonly="true"
+              :god="opponent.chosen_god"
+              
               
             />
             
@@ -52,8 +52,7 @@
             <h4>Wybrany bóg</h4>
             <GodsNeutralDisplay
               v-if="player.chosen_god && player.chosen_god.name"
-              :gods="[{ ...player.chosen_god, selected: true }]"
-              :readonly="true"
+              :god="player.chosen_god"
             />
             
           </div>
@@ -82,6 +81,9 @@
             />
             <div v-if="canSelectDice" class="confirm-dice-wrapper">
               <button class="confirm-dice-button" @click="confirmDice">Zatwierdź</button>
+            </div>
+            <div>
+              <h4>Ilość rzutów:{{ player.rzuty }}</h4>
             </div>
           </div>
 
@@ -173,19 +175,35 @@ export default {
     confirmDice() {
   if (!this.canSelectDice) return;
 
-  const selectedDice = this.player.rolled_dice.filter((_, i) =>
-    this.selectedDiceIndexes.includes(i)
-  );
+  let selectedDice;
+
+  if (this.player.rzuty === 1) {
+    // Jeśli rzuty = 1, zatwierdź wszystkie kości
+    selectedDice = this.player.rolled_dice.slice(); // kopia wszystkich kości
+    this.selectedDiceIndexes = this.player.rolled_dice.map((_, i) => i);
+  } else {
+    // normalnie zatwierdź tylko wybrane kości
+    selectedDice = this.player.rolled_dice.filter((_, i) =>
+      this.selectedDiceIndexes.includes(i)
+    );
+  }
+
+  // Dodaj zatwierdzone kości do zapisanych
   this.player.saved_dice.push(...selectedDice);
+
+  // Usuń zatwierdzone kości z rzutu
   this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
     !this.selectedDiceIndexes.includes(i)
   );
+
   socket.emit('confirm_dice', {
     player: this.playerName,
     selectedIndexes: this.selectedDiceIndexes
   });
+
   this.selectedDiceIndexes = [];
 },
+
 
 chooseGod({ godName, level }) {
   if (!this.canSelectGod) return;
@@ -283,7 +301,13 @@ chooseGod({ godName, level }) {
 .neutral-block {
   flex: 1;
   min-width: 200px;
+  max-width: 220px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
+
 .confirm-dice-wrapper {
   margin-top: 0.5rem;
   text-align: center;

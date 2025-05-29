@@ -14,6 +14,7 @@ class Player:
         self.saved_dice:List[Die]=[]
         self.gods:List[God]=gods
         self.chosen_god:Optional[God]=None
+        self.rzuty=3
 
         
 
@@ -64,6 +65,7 @@ class Player:
         data={"name":self.name,
               "HP":self.hp,
               "Mana":self.mana,
+              "rzuty":self.rzuty,
               "rolled_dice":[die.return_data() for die in self.rolled_dice],
               "saved_dice":[die.return_data() for die in self.saved_dice],
               "gods":[god.return_data() for god in self.gods],

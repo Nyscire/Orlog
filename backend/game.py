@@ -3,7 +3,7 @@ from god import God,god_factory
 from die import Die
 import random
 from typing import Optional,Dict
-
+from copy import deepcopy
 
 class Game:
     DICES=['axe','arrow','helmet','mana','shield']
@@ -37,7 +37,7 @@ class Game:
         return None
     
     def register_player(self,player_name:str) -> None:
-        self.players[player_name]=Player(player_name,self.GODS)
+        self.players[player_name]=Player(player_name,deepcopy(self.GODS))
         if len(self.players)==2:
             self.can_start=True
             self.active_player,self.passive_player=list(self.players.keys())
@@ -46,10 +46,11 @@ class Game:
 
     def roll_dice(self) -> None:
         if self.attacker:
-            for _ in range(6):
+            for _ in range(6-len(self.attacker.saved_dice)):
                 stat = random.choice(self.DICES)
                 mana=random.choice([True,False])
                 self.attacker.rolled_dice.append(Die(stat,mana))
+                
 
     def start(self) ->  None:
         if self.active_player:

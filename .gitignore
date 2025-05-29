@@ -29,3 +29,4 @@ coverage
 
 *.tsbuildinfo
 *.pyc
+__pycache__/

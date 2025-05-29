@@ -1,52 +1,73 @@
 <template>
-  <div class="gods-container">
-    <div
-      v-for="god in gods"
-      :key="god.name"
-      class="god-card selected"
-    >
-      <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
-      <h3 class="god-name">{{ god.name }}</h3>
+  <div class="god-card neutral-god-card">
+    <h4 class="god-name">{{ god.name }}</h4>
+    <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
 
-      <div class="chosen-level" v-if="god.level">
-        <strong>Poziom: {{ god.level }}</strong>
-      </div>
-
-      <!-- Tooltip zawsze widoczny pod kartą jeśli jest wybrany poziom -->
-      <div
-  v-if="god.level !== null && god.level !== undefined && god.levels?.[god.level]"
-  class="tooltip-visible"
->
-  {{ god.levels[god.level] }}
-</div>
-
+    <!-- Tooltip – wyświetlany przy hover -->
+    <div class="tooltip-card">
+      {{ god.level ? god.levels?.[god.level-1] : god.description }}
     </div>
   </div>
 </template>
 
 <script>
 export default {
+  name: "GodsNeutralDisplay",
   props: {
-    gods: Array
-  },
-  
-
-};
+    god: {
+      type: Object,
+      required: true
+    }
+  }
+}
 </script>
 
 <style scoped>
-@import "@/assets/GodCardStyles.css";
+.god-card {
+  position: relative;
+  overflow: visible;
+  border: 2px solid #ccc;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  padding-top: 0;
+  width: 150px;
+  background: #fff;
+  box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
 
-/* Styl dla tooltipa widocznego pod kartą */
-.tooltip-visible {
+.god-icon {
+  max-width: 50px;
+  max-height: 50px;
+  margin: 0.5rem 0;
+}
+
+.god-name {
+  margin-top: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.tooltip-card {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
   width: 180px;
-  background-color: white;
+  background: #fff;
   border: 1px solid #ddd;
   border-radius: 6px;
-  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
   font-size: 13px;
-  text-align: center;
-  margin: 10px auto 0; /* centrowanie pod kartą */
-  padding: 8px 0;
+  padding: 8px;
+  margin-top: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 20;
+  white-space: pre-wrap;
+}
+
+.god-card:hover .tooltip-card {
+  opacity: 1;
 }
 </style>

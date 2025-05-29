@@ -84,13 +84,13 @@ def god_factory()->List[God]:
         [2, 3, 5]
     ))
 
-    gods.append(Loki(
-        "Loki",
-        "Koszt many: 2/3/5\nTymczasowo wzmocnij siłę tarczy o 1/2/3 punkty",
-        ["2 many: +1 tarcza", "3 many: +2 tarcze", "5 many: +3 tarcze"],
-        "defensive",
-        [2, 3, 5]
-    ))
+    # gods.append(Loki(
+    #     "Loki",
+    #     "Koszt many: 2/3/5\nTymczasowo wzmocnij siłę tarczy o 1/2/3 punkty",
+    #     ["2 many: +1 tarcza", "3 many: +2 tarcze", "5 many: +3 tarcze"],
+    #     "defensive",
+    #     [2, 3, 5]
+    # ))
 
 
 
