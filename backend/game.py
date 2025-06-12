@@ -18,12 +18,21 @@ class Game:
         self.passive_player: Optional[str]=None
         self.stage: Optional[str]=None
         self.socket = socket
+
+
     def find_god(self,god_name) ->God | None:
         for god in self.GODS:
             if god.name==god_name:
                 return god
 
         return None
+    
+    @property
+    def can_players_roll(self) ->bool:
+        if self.attacker and self.defender:
+            return self.attacker.can_roll or self.defender.can_roll
+        return False 
+
     @property
     def attacker(self) -> Player | None:
         if self.active_player:
@@ -50,6 +59,7 @@ class Game:
                 stat = random.choice(self.DICES)
                 mana=random.choice([True,False])
                 self.attacker.rolled_dice.append(Die(stat,mana))
+            self.attacker.rzuty-=1
                 
 
     def start(self) ->  None:
@@ -61,6 +71,7 @@ class Game:
                 player.rolled_dice=[]
                 player.saved_dice=[]
                 player.chosen_god=None
+                player.rzuty=3
 
     
     def activate_gods(self):
@@ -94,11 +105,15 @@ class Game:
         for player in self.players.values():
             player.mana+=player.temp_stats["mana"]
 
+    
+
     def change_move(self) -> None:
         if self.stage=="dice" and self.turn==1:
-            self.switch_active_player()
-            self.turn=2
-            self.roll_dice()
+            if self.defender and self.defender.rzuty>0:
+                self.switch_active_player()
+                self.roll_dice()
+            if self.defender and self.defender.rzuty==0 and self.attacker and self.attacker.rzuty==0:
+                self.turn=2
         elif self.stage=="dice" and self.turn==2:
             self.switch_active_player()
             self.stage="gods"

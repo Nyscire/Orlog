@@ -19,8 +19,12 @@ class Player:
         
 
     def choose_dice(self,dice:List[int]) -> None:
-        self.saved_dice = [elem for i, elem in enumerate(self.rolled_dice) if i  in dice]
+        print(f"Wylosowano:{self.rolled_dice}")
+        saved_dice = [elem for i, elem in enumerate(self.rolled_dice) if i  in dice]
+        self.saved_dice.extend(saved_dice)
+        print(f"Zatwierdzono: {saved_dice}")
         self.rolled_dice=[]
+        print(f"DEBUG {self.saved_dice=}")
 
     def attack(self,enemy:Player) -> None:
         dmg=0
@@ -36,7 +40,12 @@ class Player:
         dmg+=max(axe_dmg,0)
         print(f"{self.temp_stats=}\n {enemy.temp_stats=}\n {arrow_dmg=}\t {axe_dmg=}\t{dmg=}")
         enemy.hp-=dmg
-        
+
+    @property
+    def can_roll(self):
+        return self.rzuty>0
+
+
     @property
     def temp_stats(self) ->Dict[str,int]:
         stat_summary = {"mana": 0,

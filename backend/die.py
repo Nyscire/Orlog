@@ -7,3 +7,6 @@ class Die:
               "gives_mana":self.gives_mana}
         
         return data
+    
+    def __repr__(self) -> str:
+        return f"DIE [{self.stat} {self.gives_mana}]"
