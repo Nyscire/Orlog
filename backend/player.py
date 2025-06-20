@@ -25,6 +25,7 @@ class Player:
         print(f"Zatwierdzono: {saved_dice}")
         self.rolled_dice=[]
         print(f"DEBUG {self.saved_dice=}")
+        self.rzuty-=1
 
     def attack(self,enemy:Player) -> None:
         dmg=0

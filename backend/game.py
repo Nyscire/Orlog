@@ -59,7 +59,6 @@ class Game:
                 stat = random.choice(self.DICES)
                 mana=random.choice([True,False])
                 self.attacker.rolled_dice.append(Die(stat,mana))
-            self.attacker.rzuty-=1
                 
 
     def start(self) ->  None:
@@ -112,8 +111,12 @@ class Game:
             if self.defender and self.defender.rzuty>0:
                 self.switch_active_player()
                 self.roll_dice()
-            if self.defender and self.defender.rzuty==0 and self.attacker and self.attacker.rzuty==0:
-                self.turn=2
+            elif self.defender and self.defender.rzuty==0 and self.attacker and self.attacker.rzuty==0:
+                # Both players done with dice - move to gods stage immediately
+                self.switch_active_player()
+                self.stage="gods"
+                self.turn=1
+
         elif self.stage=="dice" and self.turn==2:
             self.switch_active_player()
             self.stage="gods"
@@ -130,9 +133,20 @@ class Game:
             self.stage="dice"
 
     def update_game_status(self,data) -> None:
+        print(f"=== DEBUG update_game_status ===")
+        print(f"Active player (attacker): {self.attacker.name if self.attacker else None}")
+        print(f"Data received: {data}")
+        print(f"Stage: {self.stage}, Turn: {self.turn}")
+
         if self.attacker:
-            if self.stage=="dice":
-                self.attacker.choose_dice(data)
+            if self.stage == "dice":
+            # Only process dice selection if player has throws left
+                if self.attacker.rzuty > 0:
+                    print(f"Before choose_dice - attacker.saved_dice: {self.attacker.saved_dice}")
+                    self.attacker.choose_dice(data)
+                    print(f"After choose_dice - attacker.saved_dice: {self.attacker.saved_dice}")
+                else:
+                    print(f"Skipping dice selection - player has no throws left")
                 
             else:
                 if data:
