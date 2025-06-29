@@ -58,8 +58,9 @@ class Game:
             for _ in range(6-len(self.attacker.saved_dice)):
                 stat = random.choice(self.DICES)
                 mana=random.choice([True,False])
-                self.attacker.rolled_dice.append(Die(stat,mana))
-                
+                #self.attacker.rolled_dice.append(Die(stat,mana))
+                self.attacker.rolled_dice.append(Die("axe",False))
+              
 
     def start(self) ->  None:
         if self.active_player:
@@ -133,11 +134,6 @@ class Game:
             self.stage="dice"
 
     def update_game_status(self,data) -> None:
-        print(f"=== DEBUG update_game_status ===")
-        print(f"Active player (attacker): {self.attacker.name if self.attacker else None}")
-        print(f"Data received: {data}")
-        print(f"Stage: {self.stage}, Turn: {self.turn}")
-
         if self.attacker:
             if self.stage == "dice":
             # Only process dice selection if player has throws left

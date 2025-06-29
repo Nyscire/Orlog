@@ -24,13 +24,17 @@
 
       <!-- Strefa neutralna -->
       <div class="neutral-section board-section-padding">
+        <transition name="fade" mode="out-in">
         <div v-if=" data.stage==='dice'">
           <h3>Aktualny etap: Wybór kości</h3>
         </div>
         <div v-else>
           <h3>Aktualny etap: Wybór boga</h3>
         </div>
+        </transition>
+        
         <h3>Aktualna tura: {{ data.active_player }}</h3>
+
         <div class="neutral-dice">
           <div class="neutral-block">
             <h4>Kości zapisane przeciwnika</h4>
@@ -50,11 +54,12 @@
 
           <div class="neutral-block">
             <h4>Wybrany bóg</h4>
+             <transition name="god-fade">
             <GodsNeutralDisplay
               v-if="player.chosen_god && player.chosen_god.name"
               :god="player.chosen_god"
             />
-            
+            </transition>
           </div>
 
           <div class="neutral-block">
@@ -70,7 +75,7 @@
           <div class="actions-and-stats">
             <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" />
           </div>
-
+          <transition name="dice-fade"></transition>
           <div class="dice-section">
             <DiceDisplay
               :dice="player.rolled_dice"
@@ -79,9 +84,11 @@
               :selected-indexes="selectedDiceIndexes"
               @toggle-selection="toggleDieSelection"
             />
+            <transition name="button-fade">
             <div v-if="canSelectDice" class="confirm-dice-wrapper">
               <button class="confirm-dice-button" @click="confirmDice">Zatwierdź</button>
             </div>
+            </transition>
             <div>
               <h4>Ilość rzutów:{{ player.rzuty }}</h4>
             </div>
@@ -323,5 +330,35 @@ chooseGod({ godName, level }) {
 }
 h3,h4 {
   text-align: center;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.4s ease;
+}
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+.dice-fade-enter-active {
+  transition: opacity 0.4s ease;
+}
+.dice-fade-enter-from {
+  opacity: 0;
+}
+
+/* For god cards */
+.god-fade-enter-active, .god-fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+.god-fade-enter-from, .god-fade-leave-to {
+  opacity: 0;
+}
+
+/* For buttons that become available */
+.button-fade-enter-active {
+  transition: all 0.3s ease;
+}
+.button-fade-enter-from {
+  opacity: 0;
+  transform: scale(0.9);
 }
 </style>

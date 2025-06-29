@@ -25,20 +25,14 @@ def handle_submit_player_name(name):
 
 @socketio.on('confirm_dice')
 def handle_confirm_dice(data):
-    player = data['player']
     selected = data['selectedIndexes']
-    print(f"[DICE] {player} wybrał kości: {selected}")
     game.update_game_status(selected)
     socketio.emit('game_state', game.return_data())
 
 @socketio.on('choose_god')
 def handle_choose_god(data):
-    player = data['player']
-    god = data['godName']
-    level = data['level']
-    print(f"[GOD] {player} wybrał: {god} (poziom {level})")
+
     game.update_game_status(data)
-    print("[DEBUG] Gracz: ",game.players[player])
     socketio.emit('game_state', game.return_data())
 
 
