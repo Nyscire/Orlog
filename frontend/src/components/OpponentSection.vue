@@ -1,7 +1,7 @@
 <template>
-  <div class="player-section opponent compact-layout">
-    <div class="horizontal-group">
-      <div class="actions-and-stats">
+  <div class="opponent-container">
+    <div class="opponent-content">
+      <div class="stats-section">
         <PlayerStats 
           :name="opponent.name" 
           :hp="opponent.HP" 
@@ -9,16 +9,20 @@
         />
       </div>
       
-      <DiceDisplay
-        :dice="opponent.rolled_dice"
-        title="Kości przeciwnika"
-        :selectable="false"
-      />
+      <div class="dice-section">
+        <DiceDisplay
+          :dice="opponent.rolled_dice"
+          title="Kości przeciwnika"
+          :selectable="false"
+        />
+      </div>
       
-      <GodsOpponentDisplay
-        :gods="opponent.gods"
-        :readonly="true" 
-      />
+      <div class="gods-section">
+        <GodsOpponentDisplay
+          :gods="opponent.gods"
+          :readonly="true" 
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -45,38 +49,57 @@ export default {
 </script>
 
 <style scoped>
-.player-section {
-  margin: 1rem 0;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.compact-layout {
-  flex-direction: row;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.horizontal-group {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-around;
-  width: 100%;
-}
-
-.actions-and-stats {
-  flex: 0 0 220px;
+.opponent-container {
+  height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.opponent-content {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  height: 100%;
+  max-height: 180px;
+}
+
+.stats-section {
+  flex: 0 0 200px;
+  display: flex;
+  justify-content: center;
+}
+
+.dice-section {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  max-width: 300px;
+}
+
+.gods-section {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* Compact layout adjustments */
+@media (max-height: 800px) {
+  .opponent-content {
+    max-height: 160px;
+  }
+}
+
+@media (max-height: 700px) {
+  .opponent-content {
+    max-height: 140px;
+    gap: 0.5rem;
+  }
+  
+  .stats-section {
+    flex: 0 0 180px;
+  }
 }
 </style>

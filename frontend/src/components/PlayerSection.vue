@@ -1,7 +1,7 @@
 <template>
-  <div class="player-section self compact-layout">
-    <div class="horizontal-group">
-      <div class="actions-and-stats">
+  <div class="player-container">
+    <div class="player-content">
+      <div class="stats-section">
         <PlayerStats 
           :name="player.name" 
           :hp="player.HP" 
@@ -29,16 +29,18 @@
           </div>
         </transition>
         
-        <div>
-          <h4>Ilość rzutów: {{ player.rzuty }}</h4>
+        <div class="rolls-info">
+          <h4>Rzuty: {{ player.rzuty }}</h4>
         </div>
       </div>
 
-      <GodsPlayerDisplay
-        :gods="player.gods"
-        :readonly="!canSelectGod"
-        @choose-god="$emit('choose-god', $event)"
-      />
+      <div class="gods-section">
+        <GodsPlayerDisplay
+          :gods="player.gods"
+          :readonly="!canSelectGod"
+          @choose-god="$emit('choose-god', $event)"
+        />
+      </div>
     </div>
   </div>
 </template>
@@ -78,39 +80,26 @@ export default {
 </script>
 
 <style scoped>
-.player-section {
-  margin: 1rem 0;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 1rem;
-  flex-shrink: 0;
-}
-
-.compact-layout {
-  flex-direction: row;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-
-.horizontal-group {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-around;
-  width: 100%;
-}
-
-.actions-and-stats {
-  flex: 0 0 220px;
+.player-container {
+  height: 100%;
   display: flex;
   flex-direction: column;
+  justify-content: center;
+}
+
+.player-content {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+  height: 100%;
+  max-height: 180px;
+}
+
+.stats-section {
+  flex: 0 0 200px;
+  display: flex;
+  justify-content: center;
 }
 
 .dice-section {
@@ -118,29 +107,70 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.5rem;
+  max-width: 300px;
+}
+
+.gods-section {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+  overflow: hidden;
 }
 
 .confirm-dice-wrapper {
-  margin-top: 0.5rem;
   text-align: center;
 }
 
 .confirm-dice-button {
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.8rem;
   font-weight: 600;
   cursor: pointer;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  transition: background-color 0.2s;
 }
 
-h3, h4 {
+.confirm-dice-button:hover {
+  background-color: #218838;
+}
+
+.rolls-info h4 {
+  margin: 0;
+  font-size: 0.9rem;
   text-align: center;
 }
 
-/* For buttons that become available */
+/* Button fade animation */
 .button-fade-enter-active {
   transition: all 0.3s ease;
 }
 .button-fade-enter-from {
   opacity: 0;
   transform: scale(0.9);
+}
+
+/* Compact layout adjustments */
+@media (max-height: 800px) {
+  .player-content {
+    max-height: 160px;
+  }
+}
+
+@media (max-height: 700px) {
+  .player-content {
+    max-height: 140px;
+    gap: 0.5rem;
+  }
+  
+  .stats-section {
+    flex: 0 0 180px;
+  }
+  
+  .dice-section {
+    gap: 0.25rem;
+  }
 }
 </style>

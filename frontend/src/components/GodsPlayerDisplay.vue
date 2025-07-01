@@ -5,9 +5,8 @@
       :key="god.name"
       class="god-card"
       :class="{ selected: isSelected(god) }"
-      style="position: relative;"
     >
-      <h3>{{ god.name }}</h3>
+      <h3 class="god-name">{{ god.name }}</h3>
       <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
 
       <div class="level-buttons" v-if="!readonly">
@@ -16,6 +15,7 @@
           :key="level"
           :class="{ active: god.level === level }"
           @click="selectLevel(god.name, level)"
+          class="level-btn"
         >
           {{ level }}
         </button>
@@ -28,13 +28,13 @@
         </button>
       </div>
 
-      <!-- Opis wybranego poziomu osobno -->
-      <div class="level-description" v-if="god.level">
-        <strong>Wybrany poziom {{ god.level }}:</strong>
+      <!-- Opis wybranego poziomu -->
+      <div class="level-description" v-if="god.level && !readonly">
+        <strong>Poziom {{ god.level }}:</strong>
         <p>{{ god.levels[god.level - 1] }}</p>
       </div>
 
-      <!-- Tooltip: OGÓLNY opis boga zawsze ten sam, widoczny przy hover -->
+      <!-- Tooltip: OGÓLNY opis boga -->
       <div class="tooltip-card">
         {{ god.description }}
       </div>
@@ -66,85 +66,123 @@ export default {
 </script>
 
 <style scoped>
-@import "@/assets/GodCardStyles.css";
-
 .gods-display {
   display: flex;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-wrap: wrap;
-  height: 262px;
+  justify-content: center;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0.25rem;
 }
+
 .god-card {
   border: 2px solid #ccc;
-  border-radius: 0.5rem;
-  padding: 1rem;
-  width: 200px;
+  border-radius: 8px;
+  padding: 0.75rem;
+  width: 160px;
+  max-height: 140px;
   background: #fff;
-  position: relative; /* dla tooltipa */
-}
-.god-card.selected {
-  border-color: #333;
-  background: #d1d8d8;
-}
-.level-buttons {
-  margin-top: 1rem;
+  position: relative;
+  transition: all 0.2s ease;
   display: flex;
-  flex-wrap: nowrap;
-  gap: 0.25rem;
-  justify-content: center;
+  flex-direction: column;
   align-items: center;
-  flex-direction: row;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.level-buttons button {
+.god-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.god-card.selected {
+  border-color: #007bff;
+  background: #e7f3ff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.god-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  text-align: center;
+  color: #495057;
+}
+
+.god-icon {
+  width: 36px;
+  height: 36px;
+  margin-bottom: 0.5rem;
+}
+
+.level-buttons {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 0.5rem;
+}
+
+.level-btn {
   padding: 0.2rem 0.4rem;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   cursor: pointer;
-  border-radius: 0.25rem;
+  border-radius: 4px;
   border: 1px solid #aaa;
-  background-color: #f9f9f9;
+  background-color: #f8f9fa;
+  transition: all 0.2s ease;
+  min-width: 24px;
 }
 
-.level-buttons button.active {
-  font-weight: bold;
-  background-color: #ddf;
+.level-btn:hover {
+  background-color: #e9ecef;
+}
+
+.level-btn.active {
+  background-color: #007bff;
+  color: white;
+  border-color: #007bff;
 }
 
 .confirm-btn {
+  padding: 0.2rem 0.5rem;
+  font-size: 0.75rem;
   font-weight: bold;
-  background-color: #cce;
+  background-color: #28a745;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.confirm-btn:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.confirm-btn:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
 }
 
 .level-description {
   margin-top: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 0.7rem;
+  text-align: center;
+  max-height: 40px;
+  overflow: hidden;
 }
 
-/* Tooltip – domyślnie ukryty i absolutnie pozycjonowany */
+.level-description p {
+  margin: 0.25rem 0 0 0;
+  line-height: 1.2;
+}
+
+/* Tooltip */
 .tooltip-card {
   position: absolute;
-  bottom: 100%;          /* Tooltip pojawia się nad kartą */
-  left: 50%;
-  transform: translateX(-50%);
-  width: 180px;
-  background: #fff;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
-  font-size: 13px;
-  padding: 8px;
-  margin-bottom: 8px;    /* odstęp od karty, ale od góry */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s ease;
-  z-index: 20;
-  white-space: pre-wrap;
+  bottom: 100%;
 }
 
-
-/* Pokaż tooltip przy hover na kartę */
-.god-card:hover .tooltip-card {
-  opacity: 1;
-  pointer-events: auto;
-}
 </style>
