@@ -3,131 +3,52 @@
     <PlayerMenu v-if="!playerName" @name-submitted="submitName" />
 
     <div v-else class="game-interface">
-      <!-- Oponent -->
-      <div class="player-section opponent compact-layout board-section-padding">
-        <div class="horizontal-group">
-        <div class="actions-and-stats">
-          <PlayerStats :name="opponent.name" :hp="opponent.HP" :mana="opponent.Mana" />
-        </div>
-          <DiceDisplay
-            :dice="opponent.rolled_dice"
-            title="Kości przeciwnika"
-            :selectable="false"
-            @toggle-selection="toggleDieSelection"
-          />
-          <GodsOpponentDisplay
-            :gods="opponent.gods"
-            :readonly="true" 
-          />
-        </div>
-      </div>
+      <!-- Opponent Section -->
+      <OpponentSection 
+        :opponent="opponent"
+        class="board-section-padding"
+      />
 
-      <!-- Strefa neutralna -->
-      <div class="neutral-section board-section-padding">
-        <transition name="fade" mode="out-in">
-        <div v-if=" data.stage==='dice'">
-          <h3>Aktualny etap: Wybór kości</h3>
-        </div>
-        <div v-else>
-          <h3>Aktualny etap: Wybór boga</h3>
-        </div>
-        </transition>
-        
-        <h3>Aktualna tura: {{ data.active_player }}</h3>
+      <!-- Neutral Zone -->
+      <NeutralZone
+        :stage="data.stage"
+        :active-player="data.active_player"
+        :opponent="opponent"
+        :player="player"
+        class="board-section-padding"
+      />
 
-        <div class="neutral-dice">
-          <div class="neutral-block">
-            <h4>Kości zapisane przeciwnika</h4>
-            <DiceDisplay :dice="opponent.saved_dice" title="" />
-          </div>
-
-          <div class="neutral-block">
-            <h4>Wybrany bóg przeciwnika</h4>
-            <GodsNeutralDisplay
-              v-if="opponent.chosen_god && opponent.chosen_god.name"
-              :god="opponent.chosen_god"
-              
-              
-            />
-            
-          </div>
-
-          <div class="neutral-block">
-            <h4>Wybrany bóg</h4>
-             <transition name="god-fade">
-            <GodsNeutralDisplay
-              v-if="player.chosen_god && player.chosen_god.name"
-              :god="player.chosen_god"
-            />
-            </transition>
-          </div>
-
-          <div class="neutral-block">
-            <h4>Kości zapisane gracza</h4>
-            <DiceDisplay :dice="player.saved_dice" title="" />
-          </div>
-        </div>
-      </div>
-
-      <!-- Gracz -->
-      <div class="player-section self compact-layout board-section-padding">
-        <div class="horizontal-group">
-          <div class="actions-and-stats">
-            <PlayerStats :name="player.name" :hp="player.HP" :mana="player.Mana" />
-          </div>
-          <transition name="dice-fade"></transition>
-          <div class="dice-section">
-            <DiceDisplay
-              :dice="player.rolled_dice"
-              title="Wylosowane Kości"
-              :selectable="canSelectDice"
-              :selected-indexes="selectedDiceIndexes"
-              @toggle-selection="toggleDieSelection"
-            />
-            <transition name="button-fade">
-            <div v-if="canSelectDice" class="confirm-dice-wrapper">
-              <button class="confirm-dice-button" @click="confirmDice">Zatwierdź</button>
-            </div>
-            </transition>
-            <div>
-              <h4>Ilość rzutów:{{ player.rzuty }}</h4>
-            </div>
-          </div>
-
-          <GodsPlayerDisplay
-            :gods="player.gods"
-            :readonly="!canSelectGod"
-            @choose-god="chooseGod"
-          />
-        </div>
-      </div>
-
+      <!-- Player Section -->
+      <PlayerSection
+        :player="player"
+        :can-select-dice="canSelectDice"
+        :can-select-god="canSelectGod"
+        :selected-dice-indexes="selectedDiceIndexes"
+        @toggle-die-selection="toggleDieSelection"
+        @confirm-dice="confirmDice"
+        @choose-god="chooseGod"
+        class="board-section-padding"
+      />
     </div>
   </div>
 </template>
 
 <script>
 import socket from '../socket';
-import PlayerStats from './PlayerStats.vue'
-import DiceDisplay from './DiceDisplay.vue'
-import GodsPlayerDisplay from './GodsPlayerDisplay.vue'
-import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
-import GodsOpponentDisplay from './GodsOpponentDisplay.vue'
 import PlayerMenu from './PlayerMenu.vue';
-
+import OpponentSection from './OpponentSection.vue';
+import NeutralZone from './NeutralZone.vue';
+import PlayerSection from './PlayerSection.vue';
 
 export default {
   components: {
-    PlayerStats,
-    DiceDisplay,
-    GodsPlayerDisplay,
-    GodsOpponentDisplay,
-    GodsNeutralDisplay,
-    PlayerMenu
+    PlayerMenu,
+    OpponentSection,
+    NeutralZone,
+    PlayerSection
   },
   data() {
     return {
-      tempName: '',
       playerName: '',
       data: {},
       selectedDiceIndexes: []
@@ -147,11 +68,11 @@ export default {
       return this.data.stage
     },
     canSelectDice() {
-    return this.isMyTurn && this.stage === 'dice';
-  },
-  canSelectGod() {
-    return this.isMyTurn && this.stage === 'gods';
-  }
+      return this.isMyTurn && this.stage === 'dice';
+    },
+    canSelectGod() {
+      return this.isMyTurn && this.stage === 'gods';
+    }
   },
   mounted() {
     socket.on('connect', () => {
@@ -159,87 +80,65 @@ export default {
     });
 
     socket.on('game_state', (data) => {
-      this.data=data
+      this.data = data
     });
   },
   methods: {
     submitName(name) {
-    this.playerName = name;
-    socket.emit('submit_player_name',  name );
-}
-,updateGameState(data) {
-      // Aktualizacja stanu gry na podstawie otrzymanych danych
+      this.playerName = name;
+      socket.emit('submit_player_name', name);
     },
-    sendPlayerAction(action) {
-      socket.emit('player_action', action);
-    },
-
     toggleDieSelection(index) {
       const pos = this.selectedDiceIndexes.indexOf(index)
       if (pos >= 0) this.selectedDiceIndexes.splice(pos, 1)
       else this.selectedDiceIndexes.push(index)
     },
     confirmDice() {
-  if (!this.canSelectDice) return;
+      if (!this.canSelectDice) return;
 
-  let selectedDice;
+      let selectedDice;
 
-  if (this.player.rzuty === 1) {
-    // Jeśli rzuty = 1, zatwierdź wszystkie kości
-    selectedDice = this.player.rolled_dice.slice(); // kopia wszystkich kości
-    this.selectedDiceIndexes = this.player.rolled_dice.map((_, i) => i);
-  } else {
-    // normalnie zatwierdź tylko wybrane kości
-    selectedDice = this.player.rolled_dice.filter((_, i) =>
-      this.selectedDiceIndexes.includes(i)
-    );
-  }
-
-  // Dodaj zatwierdzone kości do zapisanych
-  this.player.saved_dice.push(...selectedDice);
-
-  // Usuń zatwierdzone kości z rzutu
-  this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
-    !this.selectedDiceIndexes.includes(i)
-  );
-
-  socket.emit('confirm_dice', {
-    player: this.playerName,
-    selectedIndexes: this.selectedDiceIndexes
-  });
-
-  this.selectedDiceIndexes = [];
-},
-
-
-chooseGod({ godName, level }) {
-  if (!this.canSelectGod) return;
-
-  const god = this.player.gods.find(g => g.name === godName);
-  if (god) {
-    this.player.chosen_god = {
-      ...god,
-      level
-    };
-  }
-  socket.emit('choose_god', {
-    player: this.playerName,
-    godName,
-    level
-  });
-},
-
-    chooseGodLevel({ godName, level }) {
-      const god = this.player.gods.find(g => g.name === godName)
-      if (god) {
-        god.level = level
-        if (this.player.chosen_god && this.player.chosen_god.name === godName) {
-          this.player.chosen_god.level = level
-        }
+      if (this.player.rzuty === 1) {
+        // Jeśli rzuty = 1, zatwierdź wszystkie kości
+        selectedDice = this.player.rolled_dice.slice();
+        this.selectedDiceIndexes = this.player.rolled_dice.map((_, i) => i);
+      } else {
+        // normalnie zatwierdź tylko wybrane kości
+        selectedDice = this.player.rolled_dice.filter((_, i) =>
+          this.selectedDiceIndexes.includes(i)
+        );
       }
+
+      // Dodaj zatwierdzone kości do zapisanych
+      this.player.saved_dice.push(...selectedDice);
+
+      // Usuń zatwierdzone kości z rzutu
+      this.player.rolled_dice = this.player.rolled_dice.filter((_, i) =>
+        !this.selectedDiceIndexes.includes(i)
+      );
+
+      socket.emit('confirm_dice', {
+        player: this.playerName,
+        selectedIndexes: this.selectedDiceIndexes
+      });
+
+      this.selectedDiceIndexes = [];
     },
-    toggleStage() {
-      this.data.stage = this.data.stage === 'dice' ? 'gods' : 'dice'
+    chooseGod({ godName, level }) {
+      if (!this.canSelectGod) return;
+
+      const god = this.player.gods.find(g => g.name === godName);
+      if (god) {
+        this.player.chosen_god = {
+          ...god,
+          level
+        };
+      }
+      socket.emit('choose_god', {
+        player: this.playerName,
+        godName,
+        level
+      });
     }
   }
 }
@@ -249,116 +148,9 @@ chooseGod({ godName, level }) {
 .game-container {
   padding: 1rem;
 }
-.name-entry {
-  text-align: center;
-  margin-top: 2rem;
-}
-.player-section {
-  margin: 1rem 0;
-  width: 100%;
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: nowrap;
-  gap: 1rem;
-  flex-shrink: 0;
-}
+
 .board-section-padding {
   padding-left: 1rem;
   padding-right: 1rem;
-}
-.compact-layout {
-  flex-direction: row;
-  justify-content: space-around;
-  flex-wrap: wrap;
-  gap: 1rem;
-}
-.horizontal-group {
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-  align-items: flex-start;
-  justify-content: space-around;
-  width: 100%;
-}
-.actions-and-stats {
-  flex: 0 0 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.dice-section {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.neutral-section {
-  border: 1px solid #ccc;
-  height: 361px;;
-  background: #f9f9f9;
-}
-.neutral-dice {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-around;
-  gap: 1rem;
-}
-.neutral-block {
-  flex: 1;
-  min-width: 200px;
-  max-width: 220px;
-  padding: 0.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.confirm-dice-wrapper {
-  margin-top: 0.5rem;
-  text-align: center;
-}
-.confirm-dice-button {
-  padding: 0.5rem 1rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-.debug-controls {
-  margin-top: 2rem;
-  text-align: center;
-}
-h3,h4 {
-  text-align: center;
-}
-
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.4s ease;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-.dice-fade-enter-active {
-  transition: opacity 0.4s ease;
-}
-.dice-fade-enter-from {
-  opacity: 0;
-}
-
-/* For god cards */
-.god-fade-enter-active, .god-fade-leave-active {
-  transition: opacity 0.5s ease;
-}
-.god-fade-enter-from, .god-fade-leave-to {
-  opacity: 0;
-}
-
-/* For buttons that become available */
-.button-fade-enter-active {
-  transition: all 0.3s ease;
-}
-.button-fade-enter-from {
-  opacity: 0;
-  transform: scale(0.9);
 }
 </style>
