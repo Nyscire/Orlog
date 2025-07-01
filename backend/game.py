@@ -58,8 +58,8 @@ class Game:
             for _ in range(6-len(self.attacker.saved_dice)):
                 stat = random.choice(self.DICES)
                 mana=random.choice([True,False])
-                #self.attacker.rolled_dice.append(Die(stat,mana))
-                self.attacker.rolled_dice.append(Die("axe",False))
+                self.attacker.rolled_dice.append(Die(stat,mana))
+                #self.attacker.rolled_dice.append(Die("axe",False))
               
 
     def start(self) ->  None:

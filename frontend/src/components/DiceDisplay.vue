@@ -50,13 +50,16 @@ export default {
 }
 
 .dice-grid {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: nowrap;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  justify-items: center;
   align-items: center;
   gap: 0.5rem;
+  min-height: 52px; /* Ensure minimum height for dice */
+  max-width: 180px; /* Limit width to accommodate 3 dice per row */
+  margin: 0 auto;
 }
+
 h3,h4 {
   text-align: center;
 }

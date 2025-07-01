@@ -1,0 +1,110 @@
+/* Simple Fade Animations - No Style Overrides */
+
+/* Basic Keyframes */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes slideInUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes slideInDown {
+  from { 
+    opacity: 0; 
+    transform: translateY(-20px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+/* Gentle Pulse for Selected Elements */
+@keyframes gentlePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Basic Animations - Only Adding, Not Overriding */
+.die {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.god-card {
+  animation: scaleIn 0.4s ease-out;
+}
+
+.tooltip-card {
+  animation: slideInUp 0.25s ease-out;
+}
+
+.player-stats {
+  animation: slideInDown 0.3s ease-out;
+}
+
+.neutral-section {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.confirm-dice-button {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Enhanced existing transitions without overriding styles */
+.fade-enter-active {
+  animation: fadeIn 0.4s ease-out;
+}
+
+.fade-leave-active {
+  animation: fadeOut 0.4s ease-out;
+}
+
+.god-fade-enter-active {
+  animation: scaleIn 0.5s ease-out;
+}
+
+.god-fade-leave-active {
+  animation: fadeOut 0.5s ease-out;
+}
+
+.button-fade-enter-active {
+  animation: slideInUp 0.3s ease-out;
+}
+
+/* Subtle selection indicator */
+.die.selected {
+  animation: gentlePulse 2s ease-in-out infinite;
+}
+
+/* Accessibility - Respect reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
