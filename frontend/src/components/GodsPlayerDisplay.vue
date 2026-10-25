@@ -33,8 +33,9 @@
       </div>
 
       <!-- Opis wybranego poziomu -->
-      <div class="level-description" v-if="god.level && !readonly">
-        {{ god.levels[god.level - 1] }}
+      <!-- bez wybranego poziomu: co robi bóg; z poziomem: efekt i koszt tego poziomu -->
+      <div class="level-description" v-if="!readonly">
+        {{ god.level ? `Poziom ${god.level}: ${god.levels[god.level - 1]}` : effect(god) }}
       </div>
 
       <!-- Tooltip: OGÓLNY opis boga -->
@@ -65,7 +66,10 @@ export default {
       return this.cost(god, level) <= this.mana;
     },
     costLabel(god, level) {
-      return `Koszt: ${this.cost(god, level)} many`;
+      return `Poziom ${level}: ${god.levels?.[level - 1] || ''}`;
+    },
+    effect(god) {
+      return (god.description || '').split('\n').filter(line => !line.startsWith('Koszt')).join(' ');
     },
     selectLevel(godName, level) {
       this.gods.forEach(god => {
@@ -94,7 +98,7 @@ export default {
   border: 1.5px solid var(--parchment-3);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
-  width: 160px;
+  width: 180px;
   box-sizing: border-box;
   background: #fbf5e6;
   position: relative;

@@ -1,5 +1,5 @@
 <template>
-  <div class="dice-display" :class="{ compact }">
+  <div class="dice-display" :class="{ compact, labeled: labels }">
     <h4 v-if="title">{{ title }}</h4>
     <div class="dice-grid">
       <Die
@@ -8,6 +8,8 @@
         :die="die"
         :selectable="selectable"
         :selected="isSelected(index)"
+        :label="labels"
+        :tooltip-placement="tooltipPlacement"
         @click="toggleSelection(index)"
       />
     </div>
@@ -27,6 +29,12 @@ export default {
     selectable: Boolean,
     // mniejsze kości, np. dla przeciwnika i strefy środkowej
     compact: Boolean,
+    // podpisy pod kośćmi
+    labels: Boolean,
+    tooltipPlacement: {
+      type: String,
+      default: 'above'
+    },
     selectedIndexes: Array
   },
   emits: ['toggle-selection'],
@@ -66,6 +74,12 @@ export default {
 
 .compact .dice-grid {
   gap: 0.35rem;
+}
+
+/* miejsce na podpisy pod kośćmi */
+.labeled .dice-grid {
+  row-gap: 1.3rem;
+  padding-bottom: 0.95rem;
 }
 
 h3,h4 {

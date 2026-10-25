@@ -2,43 +2,41 @@
   <div
     class="die"
     :class="dieClasses"
+    :aria-label="ariaLabel"
     @click="handleClick"
     @mouseenter="handleHover"
     @mouseleave="handleLeave"
   >
-    <!-- Main die content -->
     <div class="die-content">
-      <img 
-        :src="`/img/icons/${die.stat}.svg`" 
-        :alt="die.stat" 
-        class="die-icon"
-      />
-      
-      <!-- Selection indicator -->
+      <img :src="`/img/icons/${die.stat}.svg`" alt="" class="die-icon" />
+
       <div v-if="selected" class="selection-indicator">
         <span class="checkmark">✓</span>
       </div>
-      
-      <!-- Mana indicator -->
-      <div v-if="die.gives_mana" class="mana-indicator" aria-label="daje manę"></div>
-      
-      <!-- Hover tooltip -->
-      <transition name="tooltip-fade">
-        <div v-if="showTooltip" class="die-tooltip">
-          <div class="tooltip-content">
-            <strong>{{ formatStatName(die.stat) }}</strong>
-            <div v-if="die.gives_mana" class="tooltip-mana">Daje Manę</div>
-          </div>
-        </div>
-      </transition>
+
+      <div v-if="die.gives_mana" class="mana-indicator"></div>
+
+      <div v-if="ripple" class="ripple-effect" :style="rippleStyle"></div>
     </div>
-    
-    <!-- Ripple effect -->
-    <div v-if="ripple" class="ripple-effect" :style="rippleStyle"></div>
+
+    <!-- podpowiedź jest poza .die-content, żeby nie ucinało jej zaokrąglenie kafelka -->
+    <transition name="tooltip-fade">
+      <div v-if="showTooltip" class="die-tooltip" :class="`place-${tooltipPlacement}`">
+        <div class="tooltip-content">
+          <strong>{{ info.name }}</strong>
+          <div class="tooltip-desc">{{ info.desc }}</div>
+          <div v-if="die.gives_mana" class="tooltip-mana">{{ manaBorderDesc }}</div>
+        </div>
+      </div>
+    </transition>
+
+    <span v-if="label" class="die-label">{{ info.name }}</span>
   </div>
 </template>
 
 <script>
+import { DICE_INFO, MANA_BORDER_DESC } from '../dice'
+
 export default {
   name: 'Die',
   props: {
@@ -47,7 +45,13 @@ export default {
       required: true
     },
     selected: Boolean,
-    selectable: Boolean
+    selectable: Boolean,
+    // podpis pod kafelkiem (dla kości, które gracz właśnie wybiera)
+    label: Boolean,
+    tooltipPlacement: {
+      type: String,
+      default: 'above'
+    }
   },
   // Bez tej deklaracji Vue podpina @click rodzica także pod zwykłe kliknięcie w element,
   // przez co zaznaczenie kości przełączało się dwa razy i od razu znikało.
@@ -60,6 +64,15 @@ export default {
     }
   },
   computed: {
+    info() {
+      return DICE_INFO[this.die.stat] || { name: this.die.stat, desc: '' }
+    },
+    manaBorderDesc() {
+      return MANA_BORDER_DESC
+    },
+    ariaLabel() {
+      return this.info.name + (this.die.gives_mana ? ', daje dodatkowo 1 manę' : '')
+    },
     dieClasses() {
       return {
         'selected': this.selected,
@@ -78,9 +91,7 @@ export default {
     },
     
     handleHover() {
-      if (this.selectable || this.die.gives_mana) {
-        this.showTooltip = true
-      }
+      this.showTooltip = true
     },
     
     handleLeave() {
@@ -105,17 +116,6 @@ export default {
       setTimeout(() => {
         this.ripple = false
       }, 600)
-    },
-    
-    formatStatName(stat) {
-      const statNames = {
-        'axe': 'Topór',
-        'arrow': 'Strzała',
-        'helmet': 'Hełm',
-        'shield': 'Tarcza',
-        'mana': 'Mana'
-      }
-      return statNames[stat] || stat.charAt(0).toUpperCase() + stat.slice(1)
     }
   }
 }
@@ -138,7 +138,6 @@ export default {
   justify-content: center;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: default;
-  overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -149,6 +148,20 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.die-label {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .die-icon {
@@ -222,24 +235,35 @@ export default {
   left: 50%;
   transform: translateX(-50%);
   margin-bottom: 8px;
-  z-index: 10;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.die-tooltip.place-below {
+  bottom: auto;
+  top: 100%;
+  margin: 8px 0 0;
 }
 
 .tooltip-content {
-  background: rgba(28, 19, 12, 0.95);
+  width: 190px;
+  background: rgba(28, 19, 12, 0.96);
   color: var(--parchment);
-  padding: 6px 10px;
+  padding: 7px 10px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  line-height: 1.35;
+  text-align: left;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+}
+
+.tooltip-desc {
+  margin-top: 2px;
 }
 
 .tooltip-mana {
-  font-size: 10px;
+  margin-top: 4px;
   color: var(--gold-bright);
-  margin-top: 2px;
 }
 
 .tooltip-fade-enter-active,

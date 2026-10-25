@@ -2,14 +2,16 @@
   <div class="player-stats">
     <div class="player-name">{{ name }}</div>
     <div class="stats">
-      <div class="stat hp" :class="hpLevel" :title="`Życie: ${hp} / ${maxHp}`">
+      <div class="stat hp" :class="hpLevel" :title="`Życie: ${hp} z ${maxHp}. Kto spadnie do zera, przegrywa.`">
         <span class="label">HP</span>
         <strong>{{ hp }}</strong>
         <span class="hp-bar"><span class="hp-fill" :style="{ width: hpPercent + '%' }"></span></span>
       </div>
-      <div class="stat mana" :title="pendingMana ? 'Mana z zachowanych kości trafi do puli przed walką' : 'Mana'">
+      <div class="stat mana" title="Mana: waluta, za którą kupujesz łaski bogów. Mana z odłożonych kości dochodzi przed walką.">
         <span class="mana-dot"></span>
-        <strong>{{ mana }}</strong><span v-if="pendingMana" class="pending">+{{ pendingMana }}</span>
+        <span class="label">Mana</span>
+        <strong>{{ mana }}</strong>
+        <span v-if="pendingMana" class="pending">+{{ pendingMana }} z kości</span>
       </div>
     </div>
     

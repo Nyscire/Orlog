@@ -70,6 +70,8 @@
     <footer class="status">
       <span class="dot" :class="connected ? 'ok' : 'off'"></span>
       {{ statusText }}
+      <span class="sep">·</span>
+      <button class="link-btn" @click="$emit('help')">Jak grać?</button>
     </footer>
   </div>
 </template>
@@ -96,7 +98,7 @@ export default {
     },
     error: String
   },
-  emits: ['join', 'leave'],
+  emits: ['join', 'leave', 'help'],
   data() {
     return {
       name: '',
@@ -469,6 +471,22 @@ export default {
   font-size: 0.85rem;
   color: var(--parchment-2);
   text-align: center;
+}
+
+.sep {
+  opacity: 0.6;
+}
+
+.link-btn {
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--gold-bright);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
 }
 
 .dot {
