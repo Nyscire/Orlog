@@ -23,6 +23,7 @@
           :active-player="data.active_player"
           :winner="data.winner"
           :round="data.round"
+          :log="data.log || []"
           :opponent="opponent"
           :player="player"
           @new-game="newGame"

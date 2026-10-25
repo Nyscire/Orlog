@@ -51,6 +51,9 @@ export default {
     selected: Boolean,
     selectable: Boolean
   },
+  // Bez tej deklaracji Vue podpina @click rodzica także pod zwykłe kliknięcie w element,
+  // przez co zaznaczenie kości przełączało się dwa razy i od razu znikało.
+  emits: ['click'],
   data() {
     return {
       showTooltip: false,
@@ -108,12 +111,11 @@ export default {
     
     formatStatName(stat) {
       const statNames = {
-        'strength': 'Siła',
-        'agility': 'Zręczność',
-        'intelligence': 'Inteligencja',
-        'defense': 'Obrona',
-        'magic': 'Magia',
-        'luck': 'Szczęście'
+        'axe': 'Topór',
+        'arrow': 'Strzała',
+        'helmet': 'Hełm',
+        'shield': 'Tarcza',
+        'mana': 'Mana'
       }
       return statNames[stat] || stat.charAt(0).toUpperCase() + stat.slice(1)
     }

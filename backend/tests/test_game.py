@@ -209,5 +209,59 @@ class TestRegistration(unittest.TestCase):
         self.assertEqual(list(game.players), ["A", "B"])
 
 
+class TestLog(GameTestCase):
+    def texts(self):
+        return [e["text"] for e in self.game.log]
+
+    def test_round_is_logged(self):
+        self.a.mana = 3
+        self.dice_phase(a_faces=('arrow', 'arrow') + ('helmet',) * 4, b_faces=('shield',) + ('helmet',) * 5)
+        self.gods_phase(a_choice=("Thor", 1))
+        log = self.texts()
+        self.assertEqual(log[0], "Zaczyna A")
+        self.assertIn("A odkłada: strzała, strzała, hełm, hełm, hełm, hełm", log)
+        self.assertIn("B pomija łaskę", log)
+        self.assertIn("A: Thor zadaje 3 obrażenia graczowi B (koszt 3 many, B ma 18 HP)", log)
+        self.assertIn("A atakuje (strzały 2 na tarcze 1): 1 obrażenie, B ma 17 HP", log)
+        self.assertIn("B nie ma czym atakować", log)
+        self.assertEqual(log[-1], "Zaczyna B")
+        self.assertEqual({e["round"] for e in self.game.log}, {1, 2})
+
+    def test_reroll_and_last_throw(self):
+        self.game.confirm_dice("A", [])
+        self.assertEqual(self.texts()[-1], "A rzuca jeszcze raz wszystkimi kośćmi")
+        self.b.rzuty = 1
+        self.b.rolled_dice = dice('axe+', 'mana')
+        self.game.confirm_dice("B", [])
+        self.assertEqual(self.texts()[-1], "B bierze ostatni rzut: topór (+mana), mana")
+
+    def test_heimdall_has_no_hp_info_and_failed_god_is_logged(self):
+        self.a.mana = 5
+        self.dice_phase()
+        self.gods_phase(a_choice=("Heimdall", 3))
+        self.assertIn("A: Heimdall daje +3 do toporów (koszt 5 many)", self.texts())
+
+    def test_win_and_rematch_clear_log(self):
+        self.b.hp = 1
+        self.dice_phase(a_faces=('arrow',) + ('helmet',) * 5, b_faces=('helmet',) * 6)
+        self.gods_phase()
+        self.assertEqual(self.texts()[-1], "A wygrywa!")
+        self.assertEqual(self.game.return_data()["log"][-1]["kind"], "win")
+        self.game.rematch()
+        self.assertEqual(self.texts(), ["Zaczyna B"])
+
+    def test_log_is_capped(self):
+        for _ in range(Game.MAX_LOG + 20):
+            self.game._log("x")
+        self.assertEqual(len(self.game.log), Game.MAX_LOG)
+
+
+class TestPolish(unittest.TestCase):
+    def test_damage_forms(self):
+        from pl import damage
+        self.assertEqual([damage(n) for n in (0, 1, 2, 5, 12, 22)],
+                         ["0 obrażeń", "1 obrażenie", "2 obrażenia", "5 obrażeń", "12 obrażeń", "22 obrażenia"])
+
+
 if __name__ == "__main__":
     unittest.main()

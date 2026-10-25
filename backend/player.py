@@ -44,7 +44,7 @@ class Player:
         if len(self.saved_dice) >= self.DICE_COUNT:
             self.rzuty = 0
 
-    def attack(self, enemy: Player) -> int:
+    def attack(self, enemy: Player) -> Dict[str, int]:
         my_stats = self.temp_stats
         enemy_stats = enemy.temp_stats
 
@@ -54,7 +54,8 @@ class Player:
         log.debug("%s atakuje %s: strzały %d, topory %d, razem %d",
                   self.name, enemy.name, arrow_dmg, axe_dmg, dmg)
         enemy.hp -= dmg
-        return dmg
+        return {"arrow": my_stats["arrow"], "shield": enemy_stats["shield"],
+                "axe": my_stats["axe"], "helmet": enemy_stats["helmet"], "dmg": dmg}
 
     @property
     def can_roll(self) -> bool:

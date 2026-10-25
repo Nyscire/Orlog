@@ -1,12 +1,10 @@
-import logging
 import random
 from typing import Dict, List, Optional
 
 from die import Die
 from god import LEVELS, TARGET_OPPONENT, god_factory
+from pl import DIE_NAMES, damage
 from player import Player
-
-log = logging.getLogger(__name__)
 
 
 class GameError(Exception):
@@ -17,6 +15,7 @@ class Game:
     DICES = ['axe', 'arrow', 'helmet', 'mana', 'shield']
     MAX_PLAYERS = 2
     MAX_NAME_LENGTH = 20
+    MAX_LOG = 150
 
     # Fazy gry: "waiting" -> ("dice" -> "gods" -> walka)* -> "finished"
     def __init__(self, rng: Optional[random.Random] = None) -> None:
@@ -27,6 +26,8 @@ class Game:
         self.stage: str = "waiting"
         self.winner: Optional[Player] = None
         self.rng = rng or random.Random()
+        # dziennik zdarzeń pokazywany graczom: {"round", "kind", "text"}
+        self.log: List[Dict[str, str | int]] = []
 
     # ---------- pomocnicze ----------
 
@@ -43,6 +44,10 @@ class Game:
             if other is not player:
                 return other
         raise GameError("Brak przeciwnika.")
+
+    def _log(self, text: str, kind: str = "info") -> None:
+        self.log.append({"round": self.round, "kind": kind, "text": text})
+        del self.log[:-self.MAX_LOG]
 
     def _require_turn(self, player_name: str, stage: str) -> Player:
         if self.stage == "finished":
@@ -84,6 +89,7 @@ class Game:
         self.round = 1
         self.winner = None
         self.leader = loser.name
+        self.log = []
         self._begin_round()
 
     # ---------- rundy ----------
@@ -93,6 +99,7 @@ class Game:
             player.reset_round()
         self.stage = "dice"
         self.active_player = self.leader
+        self._log(f"Zaczyna {self.leader}", "round")
         self.roll_dice(self.players[self.leader])
 
     def roll_dice(self, player: Player) -> None:
@@ -108,10 +115,20 @@ class Game:
         indexes = set(selected)
         if any(i < 0 or i >= len(player.rolled_dice) for i in indexes):
             raise GameError("Nieprawidłowy wybór kości.")
-        if player.rzuty == 1:
+        last_throw = player.rzuty == 1
+        if last_throw:
             # Ostatni rzut: zostają wszystkie wylosowane kości
             indexes = set(range(len(player.rolled_dice)))
+        kept = [player.rolled_dice[i] for i in sorted(indexes)]
         player.choose_dice(sorted(indexes))
+
+        faces = ", ".join(DIE_NAMES.get(d.stat, d.stat) + (" (+mana)" if d.gives_mana else "") for d in kept)
+        if last_throw:
+            self._log(f"{player.name} bierze ostatni rzut: {faces}", "dice")
+        elif kept:
+            self._log(f"{player.name} odkłada: {faces}", "dice")
+        else:
+            self._log(f"{player.name} rzuca jeszcze raz wszystkimi kośćmi", "dice")
         self._next_dice_turn(player)
 
     def _next_dice_turn(self, player: Player) -> None:
@@ -129,6 +146,7 @@ class Game:
         player = self._require_turn(player_name, "gods")
         if god_name is None:
             player.choose_god(None, None)  # gracz pomija łaskę w tej rundzie
+            self._log(f"{player.name} pomija łaskę", "god")
         else:
             god = player.find_god(god_name) if isinstance(god_name, str) else None
             if god is None:
@@ -140,6 +158,7 @@ class Game:
                 raise GameError(f"Za mało many: {god.name} na poziomie {level} kosztuje {cost}, "
                                 f"a masz {player.mana_available}.")
             player.choose_god(god, level)
+            self._log(f"{player.name} wybiera łaskę: {god.name}, poziom {level}", "god")
 
         if player.name == self.leader:
             self.active_player = self.opponent_of(player).name
@@ -154,7 +173,10 @@ class Game:
         order = [leader, other]
 
         for player in order:
-            player.mana += player.dice_stats["mana"]
+            gained = player.dice_stats["mana"]
+            player.mana += gained
+            if gained:
+                self._log(f"{player.name}: +{gained} many z kości, razem {player.mana}", "battle")
 
         for player in order:
             self._activate_god(player)
@@ -162,7 +184,8 @@ class Game:
                 return
 
         for attacker in order:
-            attacker.attack(self.opponent_of(attacker))
+            defender = self.opponent_of(attacker)
+            self._log_attack(attacker, defender, attacker.attack(defender))
             if self._check_winner():
                 return
 
@@ -176,11 +199,26 @@ class Game:
             return
         cost = god.cost(level)
         if player.mana < cost:
-            log.info("%s: za mało many na %s (%d/%d), łaska przepada", player.name, god.name, player.mana, cost)
+            self._log(f"{player.name}: za mało many na {god.name} ({player.mana}/{cost}), łaska przepada", "battle")
             return
         player.mana -= cost
         target = self.opponent_of(player) if god.target == TARGET_OPPONENT else player
-        god.activate(target, level)
+        hp_before = target.hp
+        effect = god.activate(target, level)
+        hp_info = f", {target.name} ma {max(target.hp, 0)} HP" if target.hp != hp_before else ""
+        self._log(f"{player.name}: {effect} (koszt {cost} many{hp_info})", "battle")
+
+    def _log_attack(self, attacker: Player, defender: Player, result: Dict[str, int]) -> None:
+        parts = []
+        if result["arrow"]:
+            parts.append(f"strzały {result['arrow']} na tarcze {result['shield']}")
+        if result["axe"]:
+            parts.append(f"topory {result['axe']} na hełmy {result['helmet']}")
+        if not parts:
+            self._log(f"{attacker.name} nie ma czym atakować", "battle")
+            return
+        self._log(f"{attacker.name} atakuje ({', '.join(parts)}): {damage(result['dmg'])}, "
+                  f"{defender.name} ma {max(defender.hp, 0)} HP", "battle")
 
     def _check_winner(self) -> bool:
         for player in self.players.values():
@@ -188,6 +226,7 @@ class Game:
                 self.winner = self.opponent_of(player)
                 self.stage = "finished"
                 self.active_player = None
+                self._log(f"{self.winner.name} wygrywa!", "win")
                 return True
         return False
 
@@ -199,4 +238,5 @@ class Game:
                 "leader": self.leader,
                 "round": self.round,
                 "stage": self.stage,
-                "winner": self.winner.name if self.winner else None}
+                "winner": self.winner.name if self.winner else None,
+                "log": self.log}
