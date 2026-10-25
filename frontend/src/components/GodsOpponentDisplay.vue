@@ -9,14 +9,15 @@
       <h3 class="god-name">{{ god.name }}</h3>
 
       <div class="chosen-level" v-if="god.level">
-        <strong>Poziom: {{ god.level }}</strong>
+        <strong>{{ $t('gods.level', { level: god.level }) }}</strong>
       </div>
 
       <!-- Tooltip – zawsze w DOM, ale widoczny tylko przy hover -->
       <div
         class="tooltip-card"
       >
-        {{ god.level ? god.levels?.[god.level - 1] : god.description }}
+        <div>{{ $t('gods.costs', god) }}</div>
+        <div>{{ $t('gods.describe', god) }}</div>
       </div>
     </div>
   </div>

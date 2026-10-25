@@ -12,7 +12,7 @@
       <div class="dice-section">
         <DiceDisplay
           :dice="opponent.rolled_dice || []"
-          title="Rzut przeciwnika"
+          :title="$t('opponent.roll')"
           :selectable="false"
           compact
           tooltip-placement="below"

@@ -35,8 +35,6 @@
 </template>
 
 <script>
-import { DICE_INFO, MANA_BORDER_DESC } from '../dice'
-
 export default {
   name: 'Die',
   props: {
@@ -65,13 +63,14 @@ export default {
   },
   computed: {
     info() {
-      return DICE_INFO[this.die.stat] || { name: this.die.stat, desc: '' }
+      const info = this.$t(`dice.${this.die.stat}`)
+      return typeof info === 'object' ? info : { name: this.die.stat, desc: '' }
     },
     manaBorderDesc() {
-      return MANA_BORDER_DESC
+      return this.$t('dice.manaBorder')
     },
     ariaLabel() {
-      return this.info.name + (this.die.gives_mana ? ', daje dodatkowo 1 manę' : '')
+      return this.info.name + (this.die.gives_mana ? `, ${this.$t('dice.extraMana')}` : '')
     },
     dieClasses() {
       return {
@@ -131,8 +130,8 @@ export default {
   flex: 0 0 auto;
   box-sizing: border-box;
   border-radius: calc(var(--die-size, 56px) * 0.2);
-  background: linear-gradient(145deg, #fdf6e6 0%, #efe0bf 60%, #e2cc9e 100%);
-  border: 1px solid #b0915c;
+  background: linear-gradient(145deg, var(--die-1) 0%, var(--die-2) 60%, var(--die-3) 100%);
+  border: 1px solid var(--die-edge);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -223,7 +222,7 @@ export default {
   width: calc(var(--die-size, 56px) * 0.22);
   height: calc(var(--die-size, 56px) * 0.22);
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff1bf, var(--gold) 55%, var(--gold-dark));
+  background: radial-gradient(circle at 35% 35%, var(--coin-light), var(--gold) 55%, var(--gold-dark));
   border: 1px solid var(--gold-dark);
   z-index: 3;
 }
@@ -247,7 +246,7 @@ export default {
 
 .tooltip-content {
   width: 190px;
-  background: rgba(28, 19, 12, 0.96);
+  background: var(--tooltip-bg);
   color: var(--parchment);
   padding: 7px 10px;
   border-radius: 6px;
@@ -281,7 +280,7 @@ export default {
 .ripple-effect {
   position: absolute;
   border-radius: 50%;
-  background: rgba(201, 162, 76, 0.35);
+  background: rgba(var(--accent-rgb), 0.35);
   transform: scale(0);
   animation: ripple 0.6s linear;
   pointer-events: none;

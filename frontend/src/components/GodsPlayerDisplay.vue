@@ -26,18 +26,19 @@
           :disabled="god.level == null"
           @click="confirmGod(god)"
         >
-          Wybierz
+          {{ $t('gods.choose') }}
         </button>
       </div>
 
       <!-- bez wybranego poziomu: co robi bóg; z poziomem: efekt i koszt tego poziomu -->
       <div class="level-description" v-if="!readonly">
-        {{ god.level ? `Poziom ${god.level}: ${god.levels[god.level - 1]}` : effect(god) }}
+        {{ god.level ? levelLabel(god, god.level) : $t('gods.describe', god) }}
       </div>
 
       <!-- Tooltip: OGÓLNY opis boga -->
       <div class="tooltip-card">
-        {{ god.description }}
+        <div>{{ $t('gods.costs', god) }}</div>
+        <div>{{ $t('gods.describe', god) }}</div>
       </div>
     </div>
   </div>
@@ -63,10 +64,11 @@ export default {
       return this.cost(god, level) <= this.mana;
     },
     costLabel(god, level) {
-      return `Poziom ${level}: ${god.levels?.[level - 1] || ''}`;
+      return this.levelLabel(god, level);
     },
-    effect(god) {
-      return (god.description || '').split('\n').filter(line => !line.startsWith('Koszt')).join(' ');
+    // "Poziom 2: 5 obrażeń (4 many)"
+    levelLabel(god, level) {
+      return this.$t('gods.levelText', { level, text: this.$t('gods.levelEffect', { god, level }) });
     },
     selectLevel(godName, level) {
       this.gods.forEach(god => {
@@ -95,7 +97,7 @@ export default {
 .god-card {
   border: 1.5px solid var(--edge);
   border-radius: 10px;
-  padding: 0.45rem 0.5rem 0.5rem;
+  padding: 0.4rem 0.5rem 0.4rem;
   width: 195px;
   box-sizing: border-box;
   background: var(--parchment);
@@ -122,8 +124,8 @@ export default {
 
 .god-card.selected {
   border-color: var(--gold);
-  background: #fff4d6;
-  box-shadow: 0 0 0 2px rgba(201, 162, 76, 0.45);
+  background: var(--card-hi);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.45);
 }
 
 .god-name {
@@ -138,8 +140,8 @@ export default {
 }
 
 .god-icon {
-  width: 34px;
-  height: 34px;
+  width: 32px;
+  height: 32px;
 }
 
 .compact .god-icon {
@@ -162,7 +164,7 @@ export default {
   color: var(--ink);
   border-radius: 4px;
   border: 1px solid var(--edge);
-  background-color: #fffaf0;
+  background-color: var(--input-bg);
   transition: all 0.2s ease;
   min-width: 24px;
 }
@@ -186,7 +188,7 @@ export default {
   padding: 0.2rem 0.5rem;
   font-size: 0.75rem;
   font-weight: bold;
-  color: var(--wood-900);
+  color: var(--on-accent);
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
   border: 1px solid var(--gold-dark);
   border-radius: 4px;

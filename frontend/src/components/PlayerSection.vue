@@ -8,9 +8,9 @@
         :pending-mana="pendingMana"
       />
       <div class="player-status">
-        <span v-if="canSelectDice || canSelectGod" class="turn-badge">Twoja tura</span>
-        <div class="rolls-counter" v-if="player.rzuty > 0" title="Ile razy możesz jeszcze rzucić w tej rundzie">
-          <span class="rolls-text">Pozostałe rzuty: {{ player.rzuty }}</span>
+        <span v-if="canSelectDice || canSelectGod" class="turn-badge">{{ $t('player.yourTurn') }}</span>
+        <div class="rolls-counter" v-if="player.rzuty > 0" :title="$t('player.rollsTitle')">
+          <span class="rolls-text">{{ $t('player.rollsLeft', { n: player.rzuty }) }}</span>
           <span class="pips">
             <span v-for="i in 3" :key="i" class="pip" :class="{ used: i > player.rzuty }"></span>
           </span>
@@ -22,9 +22,9 @@
       <!-- Dice Section -->
       <div class="dice-section" v-if="player.rolled_dice?.length > 0 || canSelectDice">
         <div class="section-title">
-          <h3>{{ canSelectDice ? 'Wybierz Kości' : 'Twoje Kości' }}</h3>
+          <h3>{{ canSelectDice ? $t('player.pickDice') : $t('player.yourDice') }}</h3>
           <div class="dice-counter" v-if="selectedDiceIndexes?.length > 0">
-            Wybrano: {{ selectedDiceIndexes.length }}
+            {{ $t('player.selected', { n: selectedDiceIndexes.length }) }}
           </div>
         </div>
         
@@ -52,12 +52,12 @@
       <!-- Gods Section -->
       <div class="gods-section" v-if="player.gods?.length > 0">
         <div class="section-title">
-          <h3>{{ canSelectGod ? 'Wybierz Boga' : 'Twoi Bogowie' }}</h3>
+          <h3>{{ canSelectGod ? $t('player.pickGod') : $t('player.yourGods') }}</h3>
           <div class="gods-status" v-if="player.chosen_god">
-            Wybrany: {{ player.chosen_god.name }}
+            {{ $t('player.chosen', { god: player.chosen_god.name }) }}
           </div>
           <button v-if="canSelectGod" class="btn btn-ghost skip-god-button" @click="$emit('skip-god')">
-            Pomiń łaskę w tej rundzie
+            {{ $t('player.skipGod') }}
           </button>
         </div>
         
@@ -110,9 +110,9 @@ export default {
       return Math.max((this.player.mana_available ?? 0) - (this.player.Mana ?? 0), 0)
     },
     confirmDiceLabel() {
-      if (this.player.rzuty === 1) return 'Zachowaj wszystkie (ostatni rzut)'
+      if (this.player.rzuty === 1) return this.$t('player.confirmLast')
       const count = this.selectedDiceIndexes?.length || 0
-      return count > 0 ? `Zatwierdź wybrane (${count})` : 'Rzuć ponownie wszystkimi'
+      return count > 0 ? this.$t('player.confirmSelected', { n: count }) : this.$t('player.rerollAll')
     }
   },
   emits: ['toggle-die-selection', 'confirm-dice', 'choose-god', 'skip-god']
@@ -123,7 +123,7 @@ export default {
 .player-container {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(180deg, #f8f0de 0%, var(--parchment) 50%, var(--parchment-2) 100%);
+  background: linear-gradient(180deg, var(--panel-top) 0%, var(--parchment) 50%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 12px;
   box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.35);
@@ -133,7 +133,7 @@ export default {
 /* złota poświata, gdy gracz ma ruch */
 .player-container.my-turn {
   border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(230, 194, 112, 0.55), 0 0 22px rgba(230, 194, 112, 0.35);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.55), 0 0 22px rgba(var(--accent-rgb), 0.35);
 }
 
 .player-header {
@@ -160,7 +160,7 @@ export default {
   font-family: var(--font-title);
   font-weight: 700;
   font-size: 0.8rem;
-  color: var(--wood-900);
+  color: var(--on-accent);
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
   border: 1px solid var(--gold-dark);
 }

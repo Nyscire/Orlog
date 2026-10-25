@@ -1,70 +1,49 @@
 <template>
   <div class="overlay" @click.self="$emit('close')">
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="help-title">
-      <button class="close" aria-label="Zamknij" @click="$emit('close')">×</button>
-      <h2 id="help-title">Jak grać w Orlog</h2>
-      <p class="lead">
-        Wygrywa ten, kto pierwszy sprowadzi życie przeciwnika do zera. Każdy zaczyna z 21 HP.
-      </p>
+      <button class="close" :aria-label="$t('help.close')" @click="$emit('close')">×</button>
+      <h2 id="help-title">{{ $t('help.title') }}</h2>
+      <p class="lead">{{ $t('help.lead') }}</p>
 
-      <h3>Przebieg rundy</h3>
+      <h3>{{ $t('help.roundTitle') }}</h3>
       <ol class="steps">
-        <li>
-          <strong>Rzuty kośćmi.</strong> Gracze rzucają na zmianę sześcioma kośćmi. Po każdym rzucie
-          zaznaczasz kości, które chcesz zatrzymać, a resztę rzucasz ponownie. Masz 3 rzuty,
-          w ostatnim zostają wszystkie kości.
-        </li>
-        <li>
-          <strong>Łaski bogów.</strong> Każdy może kupić łaskę jednego ze swoich bogów albo ją pominąć.
-          Łaska kosztuje manę, a wyższy poziom daje silniejszy efekt.
-        </li>
-        <li>
-          <strong>Walka.</strong> Mana z kości trafia do puli, działają łaski, a potem atakuje gracz,
-          który zaczynał rundę, i po nim drugi. W następnej rundzie zaczyna drugi gracz.
+        <li v-for="(step, i) in $t('help.steps')" :key="i">
+          <strong>{{ step.title }}</strong> {{ step.text }}
         </li>
       </ol>
 
-      <h3>Kości</h3>
+      <h3>{{ $t('help.diceTitle') }}</h3>
       <ul class="legend">
         <li v-for="face in faces" :key="face">
           <span class="tile"><img :src="`/img/icons/${face}.svg`" alt="" /></span>
-          <span class="legend-text"><strong>{{ info[face].name }}</strong> {{ info[face].desc }}</span>
+          <span class="legend-text"><strong>{{ $t(`dice.${face}.name`) }}</strong> {{ $t(`dice.${face}.desc`) }}</span>
         </li>
         <li>
           <span class="tile gold"><img src="/img/icons/axe.svg" alt="" /><i class="coin"></i></span>
-          <span class="legend-text"><strong>Złota obwódka</strong> Kość daje dodatkowo 1 manę, niezależnie od symbolu.</span>
+          <span class="legend-text"><strong>{{ $t('dice.manaBorderName') }}</strong> {{ $t('dice.manaBorderLegend') }}</span>
         </li>
       </ul>
 
-      <h3>Jak liczy się atak</h3>
-      <p>
-        Każda strzała zadaje 1 obrażenie, chyba że zablokuje ją tarcza. Każdy topór zadaje 1 obrażenie,
-        chyba że zablokuje go hełm. Na przykład 3 strzały na 1 tarczę to 2 obrażenia.
-      </p>
+      <h3>{{ $t('help.attackTitle') }}</h3>
+      <p>{{ $t('help.attackText') }}</p>
 
-      <h3>Mana i bogowie</h3>
-      <p>
-        Niewydana mana zostaje na kolejne rundy. Przed grą wybierasz do 3 bogów. Po najechaniu na kartę
-        boga zobaczysz, co robi, a po wybraniu poziomu: jego efekt i koszt.
-      </p>
+      <h3>{{ $t('help.manaTitle') }}</h3>
+      <p>{{ $t('help.manaText') }}</p>
 
       <div class="actions">
-        <button class="btn btn-gold" @click="$emit('close')">Rozumiem</button>
+        <button class="btn btn-gold" @click="$emit('close')">{{ $t('help.ok') }}</button>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import { DICE_INFO, FACE_ORDER } from '../dice'
+import { FACE_ORDER } from '../dice'
 
 export default {
   name: 'HelpDialog',
   emits: ['close'],
   computed: {
-    info() {
-      return DICE_INFO
-    },
     faces() {
       return FACE_ORDER
     }
@@ -93,7 +72,7 @@ export default {
   justify-content: center;
   padding: 2rem 1rem;
   overflow-y: auto;
-  background: rgba(15, 10, 6, 0.7);
+  background: var(--overlay);
 }
 
 .dialog {
@@ -102,7 +81,7 @@ export default {
   box-sizing: border-box;
   padding: 1.5rem 1.75rem 1.25rem;
   color: var(--ink);
-  background: linear-gradient(180deg, #f8f0de 0%, var(--parchment) 60%, var(--parchment-2) 100%);
+  background: linear-gradient(180deg, var(--panel-top) 0%, var(--parchment) 60%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 14px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
@@ -189,8 +168,8 @@ p {
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  background: linear-gradient(145deg, #fdf6e6 0%, #efe0bf 60%, #e2cc9e 100%);
-  border: 1px solid #b0915c;
+  background: linear-gradient(145deg, var(--die-1) 0%, var(--die-2) 60%, var(--die-3) 100%);
+  border: 1px solid var(--die-edge);
 }
 
 .tile img {
@@ -209,7 +188,7 @@ p {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #fff1bf, var(--gold) 55%, var(--gold-dark));
+  background: radial-gradient(circle at 35% 35%, var(--coin-light), var(--gold) 55%, var(--gold-dark));
   border: 1px solid var(--gold-dark);
 }
 

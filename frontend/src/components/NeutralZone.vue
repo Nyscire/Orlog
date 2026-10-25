@@ -2,36 +2,45 @@
   <div class="neutral-zone">
     <div class="stage-indicator">
       <div class="stage-badge" :class="stageClass">
-        {{ stageText }}<span v-if="round && stage !== 'waiting'"> · Runda {{ round }}</span>
+        {{ stageText }}<span v-if="round && stage !== 'waiting'"> · {{ $t('neutral.round', { n: round }) }}</span>
       </div>
       <div class="stage-right">
         <div class="turn-indicator" v-if="activePlayer">
-          <template v-if="activePlayer === player.name">Twoja tura</template>
-          <template v-else>Ruch: <span class="active-player">{{ activePlayer }}</span></template>
+          <template v-if="activePlayer === player.name">{{ $t('neutral.yourTurn') }}</template>
+          <template v-else>{{ $t('neutral.turnOf') }} <span class="active-player">{{ activePlayer }}</span></template>
         </div>
         <template v-if="!confirmLeave">
-          <button class="help-btn" @click="$emit('help')">Jak grać?</button>
-          <button class="help-btn" @click="confirmLeave = true">Opuść grę</button>
+          <button class="help-btn" @click="$emit('help')">{{ $t('neutral.howToPlay') }}</button>
+          <button class="help-btn" @click="confirmLeave = true">{{ $t('neutral.leave') }}</button>
+          <button
+            class="help-btn icon-btn"
+            :title="$t('neutral.settings')"
+            :aria-label="$t('neutral.settings')"
+            @click="$emit('settings')"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.4 7.4 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/>
+            </svg>
+          </button>
         </template>
         <span v-else class="leave-confirm">
-          Zakończyć partię dla obu graczy?
-          <button class="help-btn danger" @click="$emit('leave')">Tak, wyjdź</button>
-          <button class="help-btn" @click="confirmLeave = false">Nie</button>
+          {{ $t('neutral.leaveConfirm') }}
+          <button class="help-btn danger" @click="$emit('leave')">{{ $t('neutral.leaveYes') }}</button>
+          <button class="help-btn" @click="confirmLeave = false">{{ $t('neutral.no') }}</button>
         </span>
       </div>
     </div>
 
-    <!-- Central Battle Area -->
     <div class="battle-arena">
       <div class="player-battle-side">
         <div class="saved-dice-area">
-          <h4>Twoje odłożone kości</h4>
+          <h4>{{ $t('neutral.yourSaved') }}</h4>
           <DiceDisplay
             :dice="player.saved_dice || []"
             :selectable="false"
             compact
           />
-          <div class="dice-summary">{{ summary(player.saved_dice) || 'Jeszcze nic nie odłożono' }}</div>
+          <div class="dice-summary">{{ $t('dice.summary', player.saved_dice || []) || $t('neutral.nothingSaved') }}</div>
         </div>
         <div class="chosen-god-area" v-if="player.chosen_god">
           <GodsNeutralDisplay :god="player.chosen_god" tooltip-align="left" />
@@ -44,13 +53,13 @@
 
       <div class="opponent-battle-side">
         <div class="saved-dice-area">
-          <h4>Odłożone kości przeciwnika</h4>
+          <h4>{{ $t('neutral.opponentSaved') }}</h4>
           <DiceDisplay
             :dice="opponent.saved_dice || []"
             :selectable="false"
             compact
           />
-          <div class="dice-summary">{{ summary(opponent.saved_dice) || 'Jeszcze nic nie odłożono' }}</div>
+          <div class="dice-summary">{{ $t('dice.summary', opponent.saved_dice || []) || $t('neutral.nothingSaved') }}</div>
         </div>
         <div class="chosen-god-area" v-if="opponent.chosen_god">
           <GodsNeutralDisplay :god="opponent.chosen_god" tooltip-align="right" />
@@ -60,11 +69,10 @@
 
     <EventLog :entries="log" />
 
-    <!-- Stage Instructions -->
     <div class="instructions">
       <div v-if="stage === 'finished'" class="instruction-text game-over">
-        <span>{{ winner === player.name ? 'Wygrałeś!' : `Wygrywa ${winner}` }}</span>
-        <button class="btn btn-gold new-game-button" @click="$emit('new-game')">Nowa partia</button>
+        <span>{{ winner === player.name ? $t('neutral.youWin') : $t('neutral.winnerIs', { name: winner }) }}</span>
+        <button class="btn btn-gold new-game-button" @click="$emit('new-game')">{{ $t('neutral.newGame') }}</button>
       </div>
       <div v-else-if="instruction" class="instruction-text">{{ instruction }}</div>
     </div>
@@ -75,7 +83,6 @@
 import DiceDisplay from './DiceDisplay.vue'
 import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
 import EventLog from './EventLog.vue'
-import { diceSummary } from '../dice'
 
 export default {
   name: 'NeutralZone',
@@ -105,7 +112,7 @@ export default {
       default: () => ({})
     }
   },
-  emits: ['new-game', 'help', 'leave'],
+  emits: ['new-game', 'help', 'leave', 'settings'],
   data() {
     return {
       confirmLeave: false
@@ -115,28 +122,20 @@ export default {
     // podpowiedź, co teraz zrobić
     instruction() {
       const mine = this.activePlayer === this.player.name
-      if (this.stage === 'waiting') return 'Czekamy na drugiego gracza…'
+      if (this.stage === 'waiting') return this.$t('neutral.hint.waiting')
       if (this.stage === 'dice') {
-        if (!mine) return `${this.activePlayer} rzuca kośćmi…`
-        if (this.player.rzuty === 1) return 'Ostatni rzut: wszystkie wylosowane kości zostaną zachowane.'
-        return 'Kliknij kości, które chcesz zatrzymać, i potwierdź. Pozostałe rzucisz ponownie.'
+        if (!mine) return this.$t('neutral.hint.opponentRolling', { name: this.activePlayer })
+        if (this.player.rzuty === 1) return this.$t('neutral.hint.lastThrow')
+        return this.$t('neutral.hint.pickDice')
       }
       if (this.stage === 'gods') {
-        if (!mine) return `${this.activePlayer} wybiera łaskę boga…`
-        const mana = this.player.mana_available ?? this.player.Mana ?? 0
-        return `Wybierz poziom łaski i kliknij „Wybierz” albo pomiń łaskę. Masz do wydania ${mana} many.`
+        if (!mine) return this.$t('neutral.hint.opponentChoosing', { name: this.activePlayer })
+        return this.$t('neutral.hint.pickGod', { mana: this.player.mana_available ?? this.player.Mana ?? 0 })
       }
       return ''
     },
     stageText() {
-      const stages = {
-        'waiting': 'Oczekiwanie na graczy',
-        'dice': 'Faza Kości',
-        'gods': 'Wybór Bogów',
-        'battle': 'Walka!',
-        'finished': 'Koniec Gry'
-      }
-      return stages[this.stage] || 'Nieznana faza'
+      return this.$t(`stage.${this.stage}`) === `stage.${this.stage}` ? this.$t('stage.unknown') : this.$t(`stage.${this.stage}`)
     },
     stageClass() {
       return {
@@ -146,11 +145,6 @@ export default {
         'stage-battle': this.stage === 'battle',
         'stage-finished': this.stage === 'finished'
       }
-    }
-  },
-  methods: {
-    summary(dice) {
-      return diceSummary(dice)
     }
   }
 }
@@ -164,10 +158,10 @@ export default {
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.45rem 1rem;
-  background: radial-gradient(ellipse at 50% 40%, #faf3e2 0%, var(--parchment) 45%, var(--parchment-2) 100%);
+  background: radial-gradient(ellipse at 50% 40%, var(--panel-top) 0%, var(--parchment) 45%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 12px;
-  box-shadow: inset 0 0 30px rgba(140, 106, 44, 0.18), 0 6px 20px rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 0 30px rgba(var(--accent-rgb), 0.18), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .stage-indicator {
@@ -236,6 +230,13 @@ export default {
 
 .help-btn:hover {
   background: rgba(255, 255, 255, 0.85);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.2rem 0.45rem;
 }
 
 .help-btn.danger {
@@ -342,7 +343,7 @@ export default {
 /* dziennik zajmuje wolne miejsce w środku, a jak wpisów jest więcej, przewija się w środku */
 .event-log {
   flex: 1 1 0;
-  min-height: 4.5rem;
+  min-height: 3.75rem;
 }
 
 .instructions {

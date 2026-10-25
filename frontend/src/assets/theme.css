@@ -1,4 +1,7 @@
-/* Wspólne kolory i czcionki gry: ciemne drewno, pergamin, złoto */
+/* Kolory i czcionki gry. Motyw, czcionkę i wielkość tekstu wybiera się w ustawieniach
+   (atrybuty data-theme, data-font i data-size na <html>, zob. src/settings.js).
+   Selektory bez :root, żeby podgląd motywu w oknie ustawień też działał. */
+
 @font-face {
   font-family: 'Cinzel';
   src: url('./fonts/Cinzel.woff') format('woff');
@@ -6,7 +9,32 @@
   font-display: swap;
 }
 
-:root {
+@font-face {
+  font-family: 'Grenze Gotisch';
+  src: url('./fonts/GrenzeGotisch.woff') format('woff');
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Alegreya';
+  src: url('./fonts/Alegreya.woff') format('woff');
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Atkinson Hyperlegible Next';
+  src: url('./fonts/AtkinsonHyperlegibleNext.woff') format('woff');
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+/* ---------- motywy ---------- */
+
+/* Drewno i złoto (domyślny) */
+:root,
+[data-theme="classic"] {
   --wood-900: #1c130c;
   --wood-800: #2a1d14;
   --wood-700: #3a2819;
@@ -20,21 +48,171 @@
   --gold: #c9a24c;
   --gold-bright: #e6c270;
   --gold-dark: #8c6a2c;
+  --accent-rgb: 201, 162, 76;
+  --on-accent: #1c130c;
   --blood: #9e2b25;
   --mana: #4f5fb0;
   --moss: #4f7a3a;
   --rune: #2f5d7c;
   --violet: #6a3d8f;
+  --card: #fbf5e6;
+  --card-hi: #fff4d6;
+  --panel-top: #f8f0de;
+  --input-bg: #fffaf0;
+  --die-1: #fdf6e6;
+  --die-2: #efe0bf;
+  --die-3: #e2cc9e;
+  --die-edge: #b0915c;
+  --coin-light: #fff1bf;
+  --on-bg: #f4ead5;
+  --on-bg-soft: #ebdcbc;
+  --tooltip-bg: rgba(28, 19, 12, 0.96);
+  --overlay: rgba(15, 10, 6, 0.7);
+}
+
+/* Mroźna północ: granat, lodowy błękit */
+[data-theme="frost"] {
+  --wood-900: #0b131c;
+  --wood-800: #132030;
+  --wood-700: #1b2c40;
+  --wood-600: #284057;
+  --parchment: #edf2f6;
+  --parchment-2: #dbe4ec;
+  --parchment-3: #c2d0dc;
+  --edge: #8ea3b7;
+  --ink: #15212d;
+  --ink-soft: #4b5f72;
+  --gold: #79acd2;
+  --gold-bright: #aed4ef;
+  --gold-dark: #3b6b90;
+  --accent-rgb: 121, 172, 210;
+  --on-accent: #0b131c;
+  --blood: #a5383a;
+  --mana: #4a5ec4;
+  --moss: #3d7a5d;
+  --rune: #2b5f86;
+  --violet: #5b4a9e;
+  --card: #f6f9fb;
+  --card-hi: #e2f0fa;
+  --panel-top: #f4f7fa;
+  --input-bg: #fbfdff;
+  --die-1: #ffffff;
+  --die-2: #e7edf2;
+  --die-3: #d1dbe4;
+  --die-edge: #8ea3b7;
+  --coin-light: #eaf6ff;
+  --on-bg: #e6edf3;
+  --on-bg-soft: #b5c5d3;
+  --tooltip-bg: rgba(11, 19, 28, 0.96);
+  --overlay: rgba(5, 10, 16, 0.72);
+}
+
+/* Popiół i krew: grafit, karmazyn */
+[data-theme="ember"] {
+  --wood-900: #110f0f;
+  --wood-800: #1b1817;
+  --wood-700: #292423;
+  --wood-600: #3a3230;
+  --parchment: #efe9e4;
+  --parchment-2: #e0d6ce;
+  --parchment-3: #cbbcb0;
+  --edge: #9c897b;
+  --ink: #221917;
+  --ink-soft: #685850;
+  --gold: #c0392b;
+  --gold-bright: #e2654f;
+  --gold-dark: #7c1f17;
+  --accent-rgb: 192, 57, 43;
+  --on-accent: #fff5f0;
+  --blood: #8f1d17;
+  --mana: #4f5fb0;
+  --moss: #4f7a3a;
+  --rune: #34586f;
+  --violet: #6a3d8f;
+  --card: #f7f2ee;
+  --card-hi: #fbe5df;
+  --panel-top: #f5f0ec;
+  --input-bg: #fcf9f7;
+  --die-1: #faf6f2;
+  --die-2: #ebe2da;
+  --die-3: #d8cabe;
+  --die-edge: #9c897b;
+  --coin-light: #ffd9cf;
+  --on-bg: #eee5e0;
+  --on-bg-soft: #bdafa6;
+  --tooltip-bg: rgba(17, 15, 15, 0.96);
+  --overlay: rgba(8, 6, 6, 0.72);
+}
+
+/* Leśny mech: ciemna zieleń, brąz */
+[data-theme="forest"] {
+  --wood-900: #0b150f;
+  --wood-800: #122019;
+  --wood-700: #1a2d22;
+  --wood-600: #274131;
+  --parchment: #f1efe0;
+  --parchment-2: #e2dfc6;
+  --parchment-3: #cbc6a3;
+  --edge: #999168;
+  --ink: #1c2317;
+  --ink-soft: #555f49;
+  --gold: #b98a4b;
+  --gold-bright: #dbb06e;
+  --gold-dark: #795a2b;
+  --accent-rgb: 185, 138, 75;
+  --on-accent: #1a1408;
+  --blood: #9e2b25;
+  --mana: #4f5fb0;
+  --moss: #3f7a33;
+  --rune: #2f5d7c;
+  --violet: #6a3d8f;
+  --card: #f8f6ea;
+  --card-hi: #f2ebd1;
+  --panel-top: #f6f4e8;
+  --input-bg: #fcfbf3;
+  --die-1: #fbf9ef;
+  --die-2: #ebe6cf;
+  --die-3: #d8cfad;
+  --die-edge: #999168;
+  --coin-light: #fff0c8;
+  --on-bg: #e8ecd8;
+  --on-bg-soft: #b8bfa2;
+  --tooltip-bg: rgba(11, 21, 15, 0.96);
+  --overlay: rgba(4, 10, 6, 0.72);
+}
+
+/* ---------- czcionki ---------- */
+
+:root,
+[data-font="classic"] {
   --font-title: 'Cinzel', 'Times New Roman', serif;
   --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
 }
+
+[data-font="medieval"] {
+  --font-title: 'Grenze Gotisch', 'Cinzel', serif;
+  --font-body: 'Alegreya', Georgia, 'Times New Roman', serif;
+}
+
+/* czytelna: jedna wyraźna czcionka bezszeryfowa */
+[data-font="readable"] {
+  --font-title: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+}
+
+/* większy tekst: wszystko w rem rośnie razem */
+html[data-size="large"] {
+  font-size: 112.5%;
+}
+
+/* ---------- wspólne ---------- */
 
 body {
   font-family: var(--font-body);
   color: var(--ink);
   background-color: var(--wood-800);
   background-image:
-    radial-gradient(ellipse at 50% 40%, rgba(255, 214, 150, 0.07) 0%, rgba(0, 0, 0, 0.5) 100%),
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.05) 0%, rgba(0, 0, 0, 0.5) 100%),
     repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 2px, transparent 2px 9px),
     repeating-linear-gradient(90deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 23px);
   background-attachment: fixed;
@@ -57,7 +235,7 @@ body {
 }
 
 .btn-gold {
-  color: var(--wood-900);
+  color: var(--on-accent);
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
   border: 1px solid var(--gold-dark);
   box-shadow: 0 2px 0 var(--gold-dark), 0 4px 10px rgba(0, 0, 0, 0.25);
@@ -80,7 +258,7 @@ body {
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(43, 29, 18, 0.07);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 :focus-visible {

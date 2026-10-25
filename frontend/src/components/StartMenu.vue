@@ -1,9 +1,22 @@
 <template>
   <div class="start-screen">
+    <div class="lang-switch" role="group" aria-label="Język / Language">
+      <button
+        v-for="lang in languages"
+        :key="lang.id"
+        type="button"
+        :class="{ active: lang.id === locale }"
+        :aria-pressed="lang.id === locale"
+        @click="setLanguage(lang.id)"
+      >
+        {{ lang.id.toUpperCase() }}
+      </button>
+    </div>
+
     <header class="hero">
       <div class="runes" aria-hidden="true">ᛟ ᚱ ᛚ ᛟ ᚷ</div>
       <h1 class="title">Orlog</h1>
-      <p class="subtitle">Gra w kości dla dwóch wojowników</p>
+      <p class="subtitle">{{ $t('menu.subtitle') }}</p>
       <div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>
     </header>
 
@@ -11,29 +24,29 @@
       <template v-if="!joined">
         <div v-if="notice" class="notice">{{ notice }}</div>
         <div v-if="gameInProgress" class="notice">
-          Trwa partia: {{ lobby.players.join(' i ') }}. Jeśli to Ty, wpisz to samo imię, żeby wrócić do gry.
+          {{ $t('menu.gameInProgress', { players: lobby.players.join($t('menu.and')) }) }}
         </div>
 
-        <label class="field-label" for="player-name">Twoje imię</label>
+        <label class="field-label" for="player-name">{{ $t('menu.yourName') }}</label>
         <input
           id="player-name"
           v-model="name"
           class="name-input"
           maxlength="20"
-          placeholder="np. Eivor"
+          :placeholder="$t('menu.namePlaceholder')"
           autocomplete="off"
           @keyup.enter="join"
         />
 
         <div class="gods-header">
-          <span class="field-label">Bogowie, których zabierasz do gry</span>
+          <span class="field-label">{{ $t('menu.godsLabel') }}</span>
           <span class="gods-counter" :class="{ full: selected.length === maxGods }">
             {{ selected.length }} / {{ maxGods }}
           </span>
         </div>
-        <p class="hint">Ich łaski będziesz mógł wykupić maną w trakcie partii.</p>
+        <p class="hint">{{ $t('menu.godsHint') }}</p>
 
-        <div v-if="gods.length === 0" class="hint">Wczytuję bogów z serwera…</div>
+        <div v-if="gods.length === 0" class="hint">{{ $t('menu.loadingGods') }}</div>
         <div v-else class="gods-grid">
           <button
             v-for="god in gods"
@@ -48,23 +61,23 @@
             <span v-if="isSelected(god)" class="check" aria-hidden="true">✓</span>
             <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
             <span class="god-name">{{ god.name }}</span>
-            <span class="god-effect">{{ effect(god) }}</span>
-            <span class="god-costs">Mana: {{ god.mana_costs.join(' / ') }}</span>
+            <span class="god-effect">{{ $t('gods.describe', god) }}</span>
+            <span class="god-costs">{{ $t('menu.costs', { costs: god.mana_costs.join(' / ') }) }}</span>
           </button>
         </div>
 
         <p v-if="error" class="error">{{ error }}</p>
         <button class="btn btn-gold join-btn" :disabled="!canJoin" @click="join">
-          {{ othersWaiting.length ? `Zagraj z: ${othersWaiting.join(', ')}` : 'Dołącz do gry' }}
+          {{ othersWaiting.length ? $t('menu.playWith', { names: othersWaiting.join(', ') }) : $t('menu.join') }}
         </button>
       </template>
 
       <div v-else class="waiting">
         <div class="waiting-runes" aria-hidden="true"><span>ᚠ</span><span>ᚢ</span><span>ᚦ</span></div>
-        <h2>Czekamy na drugiego gracza</h2>
-        <p>Grasz jako <strong>{{ playerName }}</strong>, bogowie: {{ chosenGods.join(', ') }}.</p>
-        <p class="hint">Drugi gracz otwiera tę samą stronę i wpisuje swoje imię.</p>
-        <button class="btn btn-ghost" @click="$emit('leave')">Zmień imię albo bogów</button>
+        <h2>{{ $t('menu.waitingTitle') }}</h2>
+        <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: chosenGods.join(', ') }) }}</p>
+        <p class="hint">{{ $t('menu.waitingHint') }}</p>
+        <button class="btn btn-ghost" @click="$emit('leave')">{{ $t('menu.changeChoice') }}</button>
       </div>
     </section>
 
@@ -72,12 +85,16 @@
       <span class="dot" :class="connected ? 'ok' : 'off'"></span>
       {{ statusText }}
       <span class="sep">·</span>
-      <button class="link-btn" @click="$emit('help')">Jak grać?</button>
+      <button class="link-btn" @click="$emit('help')">{{ $t('menu.howToPlay') }}</button>
+      <span class="sep">·</span>
+      <button class="link-btn" @click="$emit('settings')">{{ $t('menu.settings') }}</button>
     </footer>
   </div>
 </template>
 
 <script>
+import { LANGUAGES, setSetting, settings } from '../settings'
+
 const STORAGE_KEY = 'orlog.player'
 
 export default {
@@ -101,7 +118,7 @@ export default {
     // informacja po zakończeniu partii przez przeciwnika
     notice: String
   },
-  emits: ['join', 'leave', 'help'],
+  emits: ['join', 'leave', 'help', 'settings'],
   data() {
     return {
       name: '',
@@ -109,6 +126,12 @@ export default {
     }
   },
   computed: {
+    languages() {
+      return LANGUAGES
+    },
+    locale() {
+      return settings.locale
+    },
     gods() {
       return this.lobby?.gods || []
     },
@@ -127,11 +150,11 @@ export default {
         this.selected.length >= 1 && this.selected.length <= this.maxGods
     },
     statusText() {
-      if (!this.connected) return 'Brak połączenia z serwerem. Sprawdź, czy backend działa (python main.py).'
-      if (this.joined) return 'Połączono z serwerem'
-      if (this.gameInProgress) return 'Połączono · na serwerze trwa partia'
-      if (this.othersWaiting.length) return `Połączono · na rywala czeka: ${this.othersWaiting.join(', ')}`
-      return 'Połączono · nikt jeszcze nie czeka'
+      if (!this.connected) return this.$t('menu.status.offline')
+      if (this.joined) return this.$t('menu.status.joined')
+      if (this.gameInProgress) return this.$t('menu.status.inProgress')
+      if (this.othersWaiting.length) return this.$t('menu.status.waiting', { names: this.othersWaiting.join(', ') })
+      return this.$t('menu.status.empty')
     }
   },
   watch: {
@@ -170,8 +193,8 @@ export default {
       if (this.isSelected(god)) this.selected = this.selected.filter(n => n !== god.name)
       else if (this.selected.length < this.maxGods) this.selected = [...this.selected, god.name]
     },
-    effect(god) {
-      return god.description.split('\n').filter(line => !line.startsWith('Koszt')).join(' ')
+    setLanguage(id) {
+      setSetting('locale', id)
     },
     join() {
       if (!this.canJoin) return
@@ -188,7 +211,34 @@ export default {
 </script>
 
 <style scoped>
+.lang-switch {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  display: flex;
+  border: 1px solid var(--gold-dark);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.lang-switch button {
+  padding: 0.3rem 0.75rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--on-bg-soft);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.lang-switch button.active {
+  color: var(--on-accent);
+  background: var(--gold);
+}
+
 .start-screen {
+  position: relative;
   min-height: 100vh;
   box-sizing: border-box;
   display: flex;
@@ -197,7 +247,7 @@ export default {
   justify-content: center;
   gap: 1rem;
   padding: 1.25rem 1rem;
-  color: var(--parchment);
+  color: var(--on-bg);
 }
 
 .hero {
@@ -219,7 +269,7 @@ export default {
   line-height: 1;
   letter-spacing: 0.08em;
   color: var(--gold-bright);
-  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6), 0 0 28px rgba(230, 194, 112, 0.25);
+  text-shadow: 0 3px 0 rgba(0, 0, 0, 0.6), 0 0 28px rgba(var(--accent-rgb), 0.25);
 }
 
 .subtitle {
@@ -227,7 +277,7 @@ export default {
   font-family: var(--font-title);
   font-size: 1rem;
   letter-spacing: 0.12em;
-  color: var(--parchment-2);
+  color: var(--on-bg-soft);
 }
 
 .divider {
@@ -260,7 +310,7 @@ export default {
   box-sizing: border-box;
   padding: 1.25rem 1.5rem;
   color: var(--ink);
-  background: linear-gradient(180deg, #f8f0de 0%, var(--parchment) 60%, var(--parchment-2) 100%);
+  background: linear-gradient(180deg, var(--panel-top) 0%, var(--parchment) 60%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 14px;
   box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
@@ -293,7 +343,7 @@ export default {
   font: inherit;
   font-size: 1.1rem;
   color: var(--ink);
-  background: #fffaf0;
+  background: var(--input-bg);
   border: 1.5px solid var(--edge);
   border-radius: 8px;
 }
@@ -301,7 +351,7 @@ export default {
 .name-input:focus {
   outline: none;
   border-color: var(--gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 76, 0.35);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.35);
 }
 
 .gods-header {
@@ -323,7 +373,7 @@ export default {
 
 .gods-counter.full {
   background: var(--gold);
-  color: var(--wood-900);
+  color: var(--on-accent);
 }
 
 .hint {
@@ -348,7 +398,7 @@ export default {
   font: inherit;
   color: var(--ink);
   text-align: center;
-  background: #fbf5e6;
+  background: var(--card);
   border: 1.5px solid var(--parchment-3);
   border-radius: 10px;
   cursor: pointer;
@@ -361,9 +411,9 @@ export default {
 }
 
 .god-option.selected {
-  background: #fff4d6;
+  background: var(--card-hi);
   border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(201, 162, 76, 0.45), 0 6px 14px rgba(140, 106, 44, 0.2);
+  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.45), 0 6px 14px rgba(var(--accent-rgb), 0.2);
 }
 
 .god-option.locked {
@@ -383,7 +433,7 @@ export default {
   justify-content: center;
   font-size: 0.8rem;
   font-weight: 900;
-  color: var(--wood-900);
+  color: var(--on-accent);
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
   border: 1px solid var(--gold-dark);
 }
@@ -472,7 +522,7 @@ export default {
   align-items: center;
   gap: 0.5rem;
   font-size: 0.85rem;
-  color: var(--parchment-2);
+  color: var(--on-bg-soft);
   text-align: center;
 }
 

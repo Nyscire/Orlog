@@ -1,19 +1,19 @@
 <template>
   <div class="event-log">
-    <div class="log-title">Przebieg gry</div>
+    <div class="log-title">{{ $t('log.title') }}</div>
     <div class="log-body" ref="body">
       <div v-if="rounds.length === 0" class="log-empty">
-        Tu pojawią się ruchy graczy i wyniki walk.
+        {{ $t('log.empty') }}
       </div>
       <div v-for="r in rounds" :key="r.round" class="log-round">
-        <div class="round-label">Runda {{ r.round }}<span v-if="r.title" class="round-sub">{{ r.title }}</span></div>
+        <div class="round-label">{{ $t('log.round', { n: r.round }) }}<span v-if="r.title" class="round-sub">{{ r.title }}</span></div>
         <div
           v-for="(entry, i) in r.entries"
           :key="i"
           class="log-entry"
           :class="`kind-${entry.kind}`"
         >
-          {{ entry.text }}
+          {{ text(entry) }}
         </div>
       </div>
     </div>
@@ -21,6 +21,8 @@
 </template>
 
 <script>
+import { eventText } from '../i18n'
+
 export default {
   name: 'EventLog',
   props: {
@@ -30,7 +32,7 @@ export default {
     }
   },
   computed: {
-    // wpis "Zaczyna X." trafia do nagłówka rundy, reszta pod nim
+    // początek rundy ("Zaczyna X") trafia do nagłówka, reszta pod nim
     rounds() {
       const groups = []
       for (const entry of this.entries) {
@@ -39,7 +41,7 @@ export default {
           group = { round: entry.round, title: '', entries: [] }
           groups.push(group)
         }
-        if (entry.kind === 'round') group.title = entry.text.replace(/\.$/, '')
+        if (entry.type === 'round_start') group.title = this.text(entry)
         else group.entries.push(entry)
       }
       return groups
@@ -55,6 +57,10 @@ export default {
     this.scrollToEnd()
   },
   methods: {
+    // serwer wysyła zdarzenie z parametrami, zdanie powstaje w języku gracza
+    text(entry) {
+      return eventText(entry)
+    },
     scrollToEnd() {
       const el = this.$refs.body
       if (el) el.scrollTop = el.scrollHeight
