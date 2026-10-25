@@ -142,6 +142,10 @@ export default {
   background: var(--rune);
 }
 
+.log-entry.kind-mana::before {
+  background: var(--mana);
+}
+
 .log-entry.kind-god::before {
   background: var(--violet);
 }

@@ -209,6 +209,26 @@ class TestRegistration(unittest.TestCase):
         self.assertEqual(list(game.players), ["A", "B"])
 
 
+class TestManaTiming(GameTestCase):
+    def test_dice_mana_is_in_pool_when_choosing_gods(self):
+        self.a.mana = 1
+        self.keep_all(self.a, ('mana+', 'mana', 'axe+', 'shield', 'shield', 'shield'))
+        # w trakcie rzutów mana z kości jest jeszcze "w drodze"
+        data = {p["name"]: p for p in self.game.return_data()["players"]}
+        self.assertEqual((data["A"]["Mana"], data["A"]["mana_available"]), (1, 5))
+        self.keep_all(self.b, NEUTRAL)
+        self.assertEqual(self.game.stage, "gods")
+        data = {p["name"]: p for p in self.game.return_data()["players"]}
+        self.assertEqual((data["A"]["Mana"], data["A"]["mana_available"]), (5, 5))
+
+    def test_mana_is_not_counted_twice(self):
+        self.dice_phase(a_faces=('mana+',) + ('shield',) * 5)
+        self.assertEqual(self.a.mana, 2)
+        self.gods_phase()
+        self.assertEqual(self.a.mana, 2)
+        self.assertEqual(self.a.mana_available, 2)  # nowa runda, jeszcze bez kości
+
+
 class TestLog(GameTestCase):
     def texts(self):
         return [e["text"] for e in self.game.log]
@@ -221,9 +241,9 @@ class TestLog(GameTestCase):
             "Zaczyna A.",
             "A: 2 strzały, 3 hełmy. Mana z kości: 2.",
             "B: 5 hełmów, 1 tarcza.",
+            "Mana z kości trafia do puli: A +2 (razem 5).",
             "A wybiera łaskę Thora, poziom 1 (koszt 3 many).",
             "B nie korzysta z łaski w tej rundzie.",
-            "Mana z kości trafia do puli: A +2 (razem 5).",
             "A używa łaski Thora: B traci 3 HP i ma teraz 18.",
             "A atakuje: 2 strzały na 1 tarczę. Zadaje 1 obrażenie, B ma teraz 17 HP.",
             "B nie atakuje: nie ma strzał ani toporów.",
