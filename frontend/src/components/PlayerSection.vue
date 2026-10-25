@@ -1,5 +1,5 @@
 <template>
-  <div class="player-container">
+  <div class="player-container" :class="{ 'my-turn': canSelectDice || canSelectGod }">
     <div class="player-header">
       <PlayerStats 
         :name="player.name" 
@@ -7,10 +7,13 @@
         :mana="player.Mana"
         :pending-mana="pendingMana"
       />
-      <div class="player-status" v-if="player.rzuty !== undefined">
-        <div class="rolls-counter">
-          <span class="rolls-icon">🎲</span>
-          <span class="rolls-text">Rzuty: {{ player.rzuty }}/3</span>
+      <div class="player-status">
+        <span v-if="canSelectDice || canSelectGod" class="turn-badge">Twoja tura</span>
+        <div class="rolls-counter" v-if="player.rzuty !== undefined" :title="`Zostało rzutów: ${player.rzuty}`">
+          <span class="rolls-text">Rzuty</span>
+          <span class="pips">
+            <span v-for="i in 3" :key="i" class="pip" :class="{ used: i > player.rzuty }"></span>
+          </span>
         </div>
       </div>
     </div>
@@ -35,7 +38,7 @@
         <transition name="button-slide">
           <div v-if="canSelectDice" class="dice-actions">
             <button
-              class="confirm-dice-button"
+              class="btn btn-gold confirm-dice-button"
               @click="$emit('confirm-dice')"
             >
               <span class="button-icon">✓</span>
@@ -52,7 +55,7 @@
           <div class="gods-status" v-if="player.chosen_god">
             Wybrany: {{ player.chosen_god.name }}
           </div>
-          <button v-if="canSelectGod" class="skip-god-button" @click="$emit('skip-god')">
+          <button v-if="canSelectGod" class="btn btn-ghost skip-god-button" @click="$emit('skip-god')">
             Pomiń łaskę w tej rundzie
           </button>
         </div>
@@ -119,9 +122,17 @@ export default {
 .player-container {
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
+  background: linear-gradient(180deg, #f8f0de 0%, var(--parchment) 50%, var(--parchment-2) 100%);
+  border: 1px solid var(--edge);
   border-radius: 12px;
-  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 -2px 18px rgba(0, 0, 0, 0.35);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+/* złota poświata, gdy gracz ma ruch */
+.player-container.my-turn {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(230, 194, 112, 0.55), 0 0 22px rgba(230, 194, 112, 0.35);
 }
 
 .player-header {
@@ -131,26 +142,58 @@ export default {
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 2px solid #a5d6a7;
+  background: rgba(255, 255, 255, 0.35);
+  border-bottom: 1px solid var(--parchment-3);
   border-radius: 12px 12px 0 0;
+}
+
+.player-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.turn-badge {
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.8rem;
+  color: var(--wood-900);
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border: 1px solid var(--gold-dark);
 }
 
 .rolls-counter {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.3rem 0.8rem;
-  background: linear-gradient(135deg, #4caf50, #388e3c);
-  color: white;
-  border-radius: 20px;
-  font-weight: bold;
-  font-size: 0.85rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  gap: 0.45rem;
+  padding: 0.25rem 0.7rem;
+  color: var(--ink-soft);
+  background: rgba(43, 29, 18, 0.06);
+  border: 1px solid var(--parchment-3);
+  border-radius: 999px;
+  font-weight: 700;
+  font-size: 0.8rem;
 }
 
-.rolls-icon {
-  font-size: 1rem;
+.pips {
+  display: flex;
+  gap: 3px;
+}
+
+.pip {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: var(--ink);
+  transform: rotate(45deg);
+}
+
+.pip.used {
+  background: transparent;
+  border: 1px solid var(--edge);
+  box-sizing: border-box;
 }
 
 .player-content {
@@ -185,19 +228,20 @@ export default {
 
 .section-title h3 {
   margin: 0;
-  color: #2e7d32;
+  font-family: var(--font-title);
+  color: var(--ink);
   font-size: 1rem;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .dice-counter,
 .gods-status {
-  background: rgba(76, 175, 80, 0.2);
-  padding: 0.2rem 0.6rem;
-  border-radius: 12px;
+  background: var(--parchment-3);
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
   font-size: 0.8rem;
-  font-weight: 500;
-  color: #1b5e20;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 .dice-actions {
@@ -209,46 +253,16 @@ export default {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem 1.25rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: linear-gradient(135deg, #4caf50, #388e3c);
-  color: white;
-  border: none;
-  border-radius: 25px;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
-  font-size: 0.9rem;
-}
-
-.confirm-dice-button:hover {
-  background: linear-gradient(135deg, #66bb6a, #4caf50);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.4);
-}
-
-.confirm-dice-button:active {
-  transform: translateY(0);
 }
 
 .button-icon {
-  font-size: 1.1rem;
-  font-weight: bold;
+  font-size: 1rem;
+  font-weight: 900;
 }
 
 .skip-god-button {
-  padding: 0.3rem 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: #fff;
-  color: #2e7d32;
-  border: 2px solid #4caf50;
-  border-radius: 25px;
+  padding: 0.25rem 0.9rem;
   font-size: 0.8rem;
-}
-
-.skip-god-button:hover {
-  background: #e8f5e9;
 }
 
 /* Animations */

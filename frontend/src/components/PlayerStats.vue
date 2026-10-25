@@ -2,9 +2,14 @@
   <div class="player-stats">
     <div class="player-name">{{ name }}</div>
     <div class="stats">
-      <div class="stat hp">HP: {{ hp }}</div>
-      <div class="stat mana" :title="pendingMana ? 'Mana z zachowanych kości trafi do puli przed walką' : ''">
-        Mana: {{ mana }}<span v-if="pendingMana" class="pending"> (+{{ pendingMana }})</span>
+      <div class="stat hp" :class="hpLevel" :title="`Życie: ${hp} / ${maxHp}`">
+        <span class="label">HP</span>
+        <strong>{{ hp }}</strong>
+        <span class="hp-bar"><span class="hp-fill" :style="{ width: hpPercent + '%' }"></span></span>
+      </div>
+      <div class="stat mana" :title="pendingMana ? 'Mana z zachowanych kości trafi do puli przed walką' : 'Mana'">
+        <span class="mana-dot"></span>
+        <strong>{{ mana }}</strong><span v-if="pendingMana" class="pending">+{{ pendingMana }}</span>
       </div>
     </div>
     
@@ -20,6 +25,20 @@ export default {
   pendingMana: {
     type: Number,
     default: 0
+  },
+  maxHp: {
+    type: Number,
+    default: 21
+  }
+},
+computed: {
+  hpPercent() {
+    return Math.max(0, Math.min(100, Math.round((this.hp || 0) / this.maxHp * 100)))
+  },
+  hpLevel() {
+    if (this.hp > this.maxHp / 2) return 'hp-ok'
+    if (this.hp > this.maxHp / 4) return 'hp-mid'
+    return 'hp-low'
   }
 }
 
@@ -35,8 +54,9 @@ export default {
   gap: 0.5rem;
 }
 .player-name {
-  font-weight: bold;
-  font-size: 1.1rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 1.15rem;
   margin-right: 0.25rem;
 }
 .stats {
@@ -44,14 +64,49 @@ export default {
   gap: 0.5rem;
 }
 .stat {
-  padding: 0.25rem 0.6rem;
-  border: 1px solid #ccc;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  color: var(--ink);
+  background: #fbf5e6;
+  border: 1px solid var(--edge);
   border-radius: 6px;
-  background: #fff;
   white-space: nowrap;
+  font-size: 0.9rem;
+}
+.label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.hp-bar {
+  width: 46px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(43, 29, 18, 0.15);
+  overflow: hidden;
+}
+.hp-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.hp-ok .hp-fill { background: var(--moss); }
+.hp-mid .hp-fill { background: var(--gold); }
+.hp-low .hp-fill { background: var(--blood); }
+.hp-low strong { color: var(--blood); }
+.mana-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #aab4ff, var(--mana));
+  box-shadow: 0 0 4px rgba(79, 95, 176, 0.6);
 }
 .pending {
-  color: #6f42c1;
-  font-weight: 600;
+  color: var(--mana);
+  font-weight: 700;
+  margin-left: 0.15rem;
 }
 </style>

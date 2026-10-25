@@ -43,10 +43,11 @@ export default {
   top: 100%;             /* tuż pod kartą */
   right: 0;              /* karty są przy prawej krawędzi, więc tooltip nie wychodzi poza ekran */
   width: 180px;          /* stała szerokość jak w innych tooltipach */
-  background: #fff;
-  border: 1px solid #ddd;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 1px solid var(--edge);
   border-radius: 6px;
-  box-shadow: 0 0 6px rgba(0,0,0,.1);
+  box-shadow: 0 4px 12px rgba(0,0,0,.3);
   font-size: 13px;
   padding: 8px;
   margin-top: 8px;       /* niewielki odstęp od karty */

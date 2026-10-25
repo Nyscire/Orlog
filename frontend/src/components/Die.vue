@@ -20,9 +20,7 @@
       </div>
       
       <!-- Mana indicator -->
-      <div v-if="die.gives_mana" class="mana-indicator">
-        <span class="mana-icon">🔮</span>
-      </div>
+      <div v-if="die.gives_mana" class="mana-indicator" aria-label="daje manę"></div>
       
       <!-- Hover tooltip -->
       <transition name="tooltip-fade">
@@ -124,6 +122,7 @@ export default {
 </script>
 
 <style scoped>
+/* kość jak kawałek kości/drewna: jasny kafelek, ciemny symbol */
 .die {
   position: relative;
   /* rozmiar ustawia DiceDisplay (--die-size), domyślnie 56px */
@@ -131,16 +130,16 @@ export default {
   height: var(--die-size, 56px);
   flex: 0 0 auto;
   box-sizing: border-box;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border: 2px solid #dee2e6;
+  border-radius: calc(var(--die-size, 56px) * 0.2);
+  background: linear-gradient(145deg, #fdf6e6 0%, #efe0bf 60%, #e2cc9e 100%);
+  border: 1px solid #b0915c;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
   cursor: default;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), inset 0 -2px 0 rgba(0, 0, 0, 0.08), 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .die-content {
@@ -153,108 +152,67 @@ export default {
 }
 
 .die-icon {
-  width: calc(var(--die-size, 56px) * 0.57);
-  height: calc(var(--die-size, 56px) * 0.57);
-  transition: transform 0.3s ease;
+  width: calc(var(--die-size, 56px) * 0.6);
+  height: calc(var(--die-size, 56px) * 0.6);
+  transition: transform 0.2s ease;
   z-index: 2;
 }
 
-/* Interactive states */
 .die.selectable {
   cursor: pointer;
 }
 
 .die.selectable:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-  border-color: #007bff;
-}
-
-.die.selectable:hover .die-icon {
-  transform: scale(1.1);
+  transform: translateY(-2px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8), 0 6px 12px rgba(0, 0, 0, 0.35);
 }
 
 .die.interactive:active {
-  transform: translateY(0) scale(1.02);
+  transform: translateY(0);
 }
 
-/* Selection state */
+/* zaznaczona kość: uniesiona, ze złotą obwódką */
 .die.selected {
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
-  border-color: #2196f3;
-  box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
-  animation: selectedPulse 2s ease-in-out infinite;
-}
-
-@keyframes selectedPulse {
-  0%, 100% { 
-    box-shadow: 0 0 0 3px rgba(33, 150, 243, 0.3);
-  }
-  50% { 
-    box-shadow: 0 0 0 6px rgba(33, 150, 243, 0.2);
-  }
+  transform: translateY(-3px);
+  border-color: var(--gold-dark);
+  box-shadow: 0 0 0 3px var(--gold), 0 0 0 4px var(--gold-dark), 0 6px 14px rgba(0, 0, 0, 0.35);
 }
 
 .selection-indicator {
   position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 18px;
-  height: 18px;
-  background: linear-gradient(135deg, #4caf50, #388e3c);
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: var(--ink);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 3;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 .checkmark {
-  color: white;
+  color: var(--gold-bright);
   font-size: 10px;
   font-weight: bold;
 }
 
-/* Mana state */
+/* kość dająca manę: złota obwódka i złota moneta w rogu */
 .die.mana {
-  background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
-  border: 2px dashed #4caf50;
-  position: relative;
-}
-
-.die.mana::before {
-  content: '';
-  position: absolute;
-  inset: 2px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, transparent, rgba(76, 175, 80, 0.1));
-  animation: manaShimmer 3s ease-in-out infinite;
-}
-
-@keyframes manaShimmer {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+  border: 2px solid var(--gold);
 }
 
 .mana-indicator {
   position: absolute;
-  bottom: -4px;
-  right: -4px;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
+  top: 3px;
+  right: 3px;
+  width: calc(var(--die-size, 56px) * 0.22);
+  height: calc(var(--die-size, 56px) * 0.22);
   border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: radial-gradient(circle at 35% 35%, #fff1bf, var(--gold) 55%, var(--gold-dark));
+  border: 1px solid var(--gold-dark);
   z-index: 3;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-  border: 2px solid white;
-}
-
-.mana-icon {
-  font-size: 10px;
 }
 
 /* Tooltip */
@@ -268,30 +226,19 @@ export default {
 }
 
 .tooltip-content {
-  background: rgba(0, 0, 0, 0.9);
-  color: white;
-  padding: 8px 12px;
+  background: rgba(28, 19, 12, 0.95);
+  color: var(--parchment);
+  padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(10px);
-}
-
-.tooltip-content::after {
-  content: '';
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border: 4px solid transparent;
-  border-top-color: rgba(0, 0, 0, 0.9);
 }
 
 .tooltip-mana {
   font-size: 10px;
-  opacity: 0.8;
+  color: var(--gold-bright);
   margin-top: 2px;
 }
 
@@ -310,7 +257,7 @@ export default {
 .ripple-effect {
   position: absolute;
   border-radius: 50%;
-  background: rgba(33, 150, 243, 0.3);
+  background: rgba(201, 162, 76, 0.35);
   transform: scale(0);
   animation: ripple 0.6s linear;
   pointer-events: none;
@@ -323,38 +270,14 @@ export default {
   }
 }
 
-/* Accessibility */
 @media (prefers-reduced-motion: reduce) {
   .die,
-  .die-icon,
-  .selection-indicator,
-  .tooltip-content {
+  .die-icon {
     transition: none;
   }
-  
-  .die.selected {
-    animation: none;
-  }
-  
+
   .ripple-effect {
     display: none;
   }
 }
-
-/* High contrast mode */
-@media (prefers-contrast: high) {
-  .die {
-    border-width: 3px;
-  }
-  
-  .die.selected {
-    border-color: #000;
-    background: #fff;
-  }
-  
-  .die.mana {
-    border-color:#007bff;
-    background: #388e3c;
-  }
-}
-  </style>
+</style>
