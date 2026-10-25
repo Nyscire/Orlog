@@ -83,7 +83,7 @@ def god_factory() -> List[God]:
     gods: List[God] = []
     gods.append(Thor(
         "Thor",
-        "Koszt many: 3 / 4 / 5\nPrzed walką zadaje przeciwnikowi 3 / 5 / 8 obrażeń.",
+        "Koszt many: 3 / 4 / 5\nZadaje przeciwnikowi 3 / 5 / 8 obrażeń.",
         ["3 obrażenia (3 many)", "5 obrażeń (4 many)", "8 obrażeń (5 many)"],
         TARGET_OPPONENT,
         [3, 4, 5],
@@ -92,7 +92,7 @@ def god_factory() -> List[God]:
 
     gods.append(Freya(
         "Freya",
-        "Koszt many: 2 / 3 / 5\nPrzed walką przywraca ci 2 / 5 / 9 HP.",
+        "Koszt many: 2 / 3 / 5\nPrzywraca ci 2 / 5 / 9 HP.",
         ["+2 HP (2 many)", "+5 HP (3 many)", "+9 HP (5 many)"],
         TARGET_SELF,
         [2, 3, 5],
@@ -101,7 +101,7 @@ def god_factory() -> List[God]:
 
     gods.append(Heimdall(
         "Heimdall",
-        "Koszt many: 2 / 3 / 5\nW tej rundzie dodaje 1 / 2 / 3 topory do twojego ataku.",
+        "Koszt many: 2 / 3 / 5\nDodaje 1 / 2 / 3 topory do ataku w tej rundzie.",
         ["+1 topór (2 many)", "+2 topory (3 many)", "+3 topory (5 many)"],
         TARGET_SELF,
         [2, 3, 5],
@@ -110,7 +110,7 @@ def god_factory() -> List[God]:
 
     # gods.append(Loki(
     #     "Loki",
-    #     "Koszt many: 2 / 3 / 5\nW tej rundzie dodaje 1 / 2 / 3 hełmy do twojej obrony.",
+    #     "Koszt many: 2 / 3 / 5\nDodaje 1 / 2 / 3 hełmy do obrony w tej rundzie.",
     #     ["+1 hełm (2 many)", "+2 hełmy (3 many)", "+3 hełmy (5 many)"],
     #     TARGET_SELF,
     #     [2, 3, 5],

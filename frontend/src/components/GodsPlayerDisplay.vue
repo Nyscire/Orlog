@@ -4,12 +4,10 @@
       v-for="god in gods"
       :key="god.name"
       class="god-card"
-      :class="{ selected: isSelected(god) }"
+      :class="{ selected: isSelected(god), compact: readonly }"
     >
-      <div class="god-header">
-        <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
-        <h3 class="god-name">{{ god.name }}</h3>
-      </div>
+      <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
+      <h3 class="god-name">{{ god.name }}</h3>
 
       <div class="level-buttons" v-if="!readonly">
         <button
@@ -32,7 +30,6 @@
         </button>
       </div>
 
-      <!-- Opis wybranego poziomu -->
       <!-- bez wybranego poziomu: co robi bóg; z poziomem: efekt i koszt tego poziomu -->
       <div class="level-description" v-if="!readonly">
         {{ god.level ? `Poziom ${god.level}: ${god.levels[god.level - 1]}` : effect(god) }}
@@ -94,20 +91,28 @@ export default {
   padding: 0.25rem 0;
 }
 
+/* pionowa karta jak u przeciwnika: ikona, pod nią nazwa */
 .god-card {
-  border: 1.5px solid var(--parchment-3);
-  border-radius: 8px;
-  padding: 0.4rem 0.5rem;
-  width: 180px;
+  border: 1.5px solid var(--edge);
+  border-radius: 10px;
+  padding: 0.45rem 0.5rem 0.5rem;
+  width: 195px;
   box-sizing: border-box;
-  background: #fbf5e6;
+  background: var(--parchment);
   position: relative;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* poza fazą bogów: taka sama karta jak bogowie przeciwnika */
+.god-card.compact {
+  width: 110px;
+  padding: 6px 8px;
+  gap: 2px;
 }
 
 .god-card:hover {
@@ -121,12 +126,6 @@ export default {
   box-shadow: 0 0 0 2px rgba(201, 162, 76, 0.45);
 }
 
-.god-header {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
 .god-name {
   margin: 0;
   font-family: var(--font-title);
@@ -134,9 +133,18 @@ export default {
   color: var(--ink);
 }
 
+.compact .god-name {
+  font-size: 14px;
+}
+
 .god-icon {
-  width: 30px;
-  height: 30px;
+  width: 34px;
+  height: 34px;
+}
+
+.compact .god-icon {
+  width: 32px;
+  height: 32px;
 }
 
 .level-buttons {
