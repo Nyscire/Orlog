@@ -4,9 +4,12 @@
       <div class="stage-badge" :class="stageClass">
         {{ stageText }}<span v-if="round && stage !== 'waiting'"> · Runda {{ round }}</span>
       </div>
-      <div class="turn-indicator" v-if="activePlayer">
-        <template v-if="activePlayer === player.name">Twoja tura</template>
-        <template v-else>Tura: <span class="active-player">{{ activePlayer }}</span></template>
+      <div class="stage-right">
+        <div class="turn-indicator" v-if="activePlayer">
+          <template v-if="activePlayer === player.name">Twoja tura</template>
+          <template v-else>Ruch: <span class="active-player">{{ activePlayer }}</span></template>
+        </div>
+        <button class="help-btn" @click="$emit('help')">Jak grać?</button>
       </div>
     </div>
 
@@ -14,12 +17,13 @@
     <div class="battle-arena">
       <div class="player-battle-side">
         <div class="saved-dice-area">
-          <h4>Zapisane Kości</h4>
+          <h4>Twoje odłożone kości</h4>
           <DiceDisplay
             :dice="player.saved_dice || []"
             :selectable="false"
             compact
           />
+          <div class="dice-summary">{{ summary(player.saved_dice) || 'Jeszcze nic nie odłożono' }}</div>
         </div>
         <div class="chosen-god-area" v-if="player.chosen_god">
           <GodsNeutralDisplay :god="player.chosen_god" tooltip-align="left" />
@@ -32,12 +36,13 @@
 
       <div class="opponent-battle-side">
         <div class="saved-dice-area">
-          <h4>Zapisane Kości Przeciwnika</h4>
+          <h4>Odłożone kości przeciwnika</h4>
           <DiceDisplay
             :dice="opponent.saved_dice || []"
             :selectable="false"
             compact
           />
+          <div class="dice-summary">{{ summary(opponent.saved_dice) || 'Jeszcze nic nie odłożono' }}</div>
         </div>
         <div class="chosen-god-area" v-if="opponent.chosen_god">
           <GodsNeutralDisplay :god="opponent.chosen_god" tooltip-align="right" />
@@ -49,29 +54,11 @@
 
     <!-- Stage Instructions -->
     <div class="instructions">
-      <div v-if="stage === 'dice'" class="instruction-text">
-        <span v-if="activePlayer === player.name">
-          Wybierz kości do zachowania i kliknij "Zatwierdź"
-        </span>
-        <span v-else>
-          {{ activePlayer }} wybiera kości...
-        </span>
-      </div>
-      <div v-else-if="stage === 'gods'" class="instruction-text">
-        <span v-if="activePlayer === player.name">
-          Wybierz boga i jego poziom
-        </span>
-        <span v-else>
-          {{ activePlayer }} wybiera boga...
-        </span>
-      </div>
-      <div v-else-if="stage === 'battle'" class="instruction-text">
-        Walka w toku! Sprawdź wyniki...
-      </div>
-      <div v-else-if="stage === 'finished'" class="instruction-text game-over">
+      <div v-if="stage === 'finished'" class="instruction-text game-over">
         <span>{{ winner === player.name ? 'Wygrałeś!' : `Wygrywa ${winner}` }}</span>
         <button class="btn btn-gold new-game-button" @click="$emit('new-game')">Nowa partia</button>
       </div>
+      <div v-else-if="instruction" class="instruction-text">{{ instruction }}</div>
     </div>
   </div>
 </template>
@@ -80,6 +67,7 @@
 import DiceDisplay from './DiceDisplay.vue'
 import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
 import EventLog from './EventLog.vue'
+import { diceSummary } from '../dice'
 
 export default {
   name: 'NeutralZone',
@@ -109,8 +97,24 @@ export default {
       default: () => ({})
     }
   },
-  emits: ['new-game'],
+  emits: ['new-game', 'help'],
   computed: {
+    // podpowiedź, co teraz zrobić
+    instruction() {
+      const mine = this.activePlayer === this.player.name
+      if (this.stage === 'waiting') return 'Czekamy na drugiego gracza…'
+      if (this.stage === 'dice') {
+        if (!mine) return `${this.activePlayer} rzuca kośćmi…`
+        if (this.player.rzuty === 1) return 'Ostatni rzut: wszystkie wylosowane kości zostaną zachowane.'
+        return 'Kliknij kości, które chcesz zatrzymać, i potwierdź. Pozostałe rzucisz ponownie.'
+      }
+      if (this.stage === 'gods') {
+        if (!mine) return `${this.activePlayer} wybiera łaskę boga…`
+        const mana = this.player.mana_available ?? this.player.Mana ?? 0
+        return `Wybierz poziom łaski i kliknij „Wybierz” albo pomiń łaskę. Masz do wydania ${mana} many.`
+      }
+      return ''
+    },
     stageText() {
       const stages = {
         'waiting': 'Oczekiwanie na graczy',
@@ -130,6 +134,11 @@ export default {
         'stage-finished': this.stage === 'finished'
       }
     }
+  },
+  methods: {
+    summary(dice) {
+      return diceSummary(dice)
+    }
   }
 }
 </script>
@@ -140,8 +149,8 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: 0.4rem;
+  padding: 0.45rem 1rem;
   background: radial-gradient(ellipse at 50% 40%, #faf3e2 0%, var(--parchment) 45%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 12px;
@@ -194,6 +203,36 @@ export default {
   50% { transform: scale(1.05); }
 }
 
+.stage-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.help-btn {
+  padding: 0.2rem 0.7rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.help-btn:hover {
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.dice-summary {
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  line-height: 1.3;
+  text-align: center;
+  color: var(--ink-soft);
+}
+
 .turn-indicator {
   font-family: var(--font-title);
   font-weight: 700;
@@ -217,6 +256,7 @@ export default {
 .player-battle-side,
 .opponent-battle-side {
   flex: 1;
+  min-width: 0;   /* na węższym ekranie pole z kośćmi się zwęża, zamiast wychodzić poza ekran */
   display: flex;
   align-items: center;
   gap: 0.75rem;
@@ -228,11 +268,11 @@ export default {
 
 .saved-dice-area {
   background: rgba(255, 255, 255, 0.4);
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   border: 1px dashed var(--edge);
   border-radius: 12px;
   box-sizing: border-box;
-  width: 320px;
+  width: 360px;
   max-width: 100%;
 }
 
@@ -275,12 +315,12 @@ export default {
 /* dziennik zajmuje wolne miejsce w środku, a jak wpisów jest więcej, przewija się w środku */
 .event-log {
   flex: 1 1 0;
-  min-height: 5.5rem;
+  min-height: 4.5rem;
 }
 
 .instructions {
   background: rgba(43, 29, 18, 0.06);
-  padding: 0.45rem 0.75rem;
+  padding: 0.35rem 0.75rem;
   border-radius: 8px;
   text-align: center;
 }

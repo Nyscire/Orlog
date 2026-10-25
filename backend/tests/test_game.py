@@ -215,40 +215,55 @@ class TestLog(GameTestCase):
 
     def test_round_is_logged(self):
         self.a.mana = 3
-        self.dice_phase(a_faces=('arrow', 'arrow') + ('helmet',) * 4, b_faces=('shield',) + ('helmet',) * 5)
+        self.dice_phase(a_faces=('arrow', 'arrow', 'mana+') + ('helmet',) * 3, b_faces=('shield',) + ('helmet',) * 5)
         self.gods_phase(a_choice=("Thor", 1))
-        log = self.texts()
-        self.assertEqual(log[0], "Zaczyna A")
-        self.assertIn("A odkłada: strzała, strzała, hełm, hełm, hełm, hełm", log)
-        self.assertIn("B pomija łaskę", log)
-        self.assertIn("A: Thor zadaje 3 obrażenia graczowi B (koszt 3 many, B ma 18 HP)", log)
-        self.assertIn("A atakuje (strzały 2 na tarcze 1): 1 obrażenie, B ma 17 HP", log)
-        self.assertIn("B nie ma czym atakować", log)
-        self.assertEqual(log[-1], "Zaczyna B")
+        self.assertEqual(self.texts(), [
+            "Zaczyna A.",
+            "A: 2 strzały, 3 hełmy. Mana z kości: 2.",
+            "B: 5 hełmów, 1 tarcza.",
+            "A wybiera łaskę Thora, poziom 1 (koszt 3 many).",
+            "B nie korzysta z łaski w tej rundzie.",
+            "Mana z kości trafia do puli: A +2 (razem 5).",
+            "A używa łaski Thora: B traci 3 HP i ma teraz 18.",
+            "A atakuje: 2 strzały na 1 tarczę. Zadaje 1 obrażenie, B ma teraz 17 HP.",
+            "B nie atakuje: nie ma strzał ani toporów.",
+            "Zaczyna B.",
+        ])
         self.assertEqual({e["round"] for e in self.game.log}, {1, 2})
 
-    def test_reroll_and_last_throw(self):
-        self.game.confirm_dice("A", [])
-        self.assertEqual(self.texts()[-1], "A rzuca jeszcze raz wszystkimi kośćmi")
-        self.b.rzuty = 1
-        self.b.rolled_dice = dice('axe+', 'mana')
-        self.game.confirm_dice("B", [])
-        self.assertEqual(self.texts()[-1], "B bierze ostatni rzut: topór (+mana), mana")
+    def test_dice_are_summarised_once_per_round(self):
+        for _ in range(3):
+            self.game.confirm_dice(self.game.active_player, [])
+            self.game.confirm_dice(self.game.active_player, [])
+        kinds = [e["kind"] for e in self.game.log]
+        self.assertEqual(kinds.count("dice"), 2)
 
-    def test_heimdall_has_no_hp_info_and_failed_god_is_logged(self):
+    def test_blocked_attack_and_self_gods(self):
         self.a.mana = 5
+        self.b.mana = 2
+        self.dice_phase(a_faces=('axe',) + ('shield',) * 5, b_faces=('helmet', 'helmet') + ('shield',) * 4)
+        self.gods_phase(a_choice=("Heimdall", 1), b_choice=("Freya", 1))
+        log = self.texts()
+        self.assertIn("A używa łaski Heimdalla: +1 do toporów w tej rundzie.", log)
+        self.assertIn("B używa łaski Freyi: odzyskuje 2 HP i ma teraz 23.", log)
+        self.assertIn("A atakuje: 2 topory na 2 hełmy. Obrona blokuje wszystko, B ma nadal 23 HP.", log)
+
+    def test_god_without_mana_is_logged(self):
+        self.a.mana = 3
         self.dice_phase()
-        self.gods_phase(a_choice=("Heimdall", 3))
-        self.assertIn("A: Heimdall daje +3 do toporów (koszt 5 many)", self.texts())
+        self.game.choose_god("A", "Thor", 1)
+        self.a.mana = 1  # np. mana zmieniła się przed walką
+        self.game.choose_god("B", None, None)
+        self.assertIn("A nie może użyć łaski Thora: za mało many (1 z 3).", self.texts())
 
     def test_win_and_rematch_clear_log(self):
         self.b.hp = 1
         self.dice_phase(a_faces=('arrow',) + ('helmet',) * 5, b_faces=('helmet',) * 6)
         self.gods_phase()
-        self.assertEqual(self.texts()[-1], "A wygrywa!")
+        self.assertEqual(self.texts()[-1], "Koniec gry. Wygrywa A.")
         self.assertEqual(self.game.return_data()["log"][-1]["kind"], "win")
         self.game.rematch()
-        self.assertEqual(self.texts(), ["Zaczyna B"])
+        self.assertEqual(self.texts(), ["Zaczyna B."])
 
     def test_log_is_capped(self):
         for _ in range(Game.MAX_LOG + 20):
@@ -314,6 +329,13 @@ class TestPolish(unittest.TestCase):
         from pl import damage
         self.assertEqual([damage(n) for n in (0, 1, 2, 5, 12, 22)],
                          ["0 obrażeń", "1 obrażenie", "2 obrażenia", "5 obrażeń", "12 obrażeń", "22 obrażenia"])
+
+    def test_dice_forms(self):
+        from pl import DEFENCE_FORMS, DIE_FORMS, count
+        self.assertEqual(count(1, DIE_FORMS["axe"]), "1 topór")
+        self.assertEqual(count(5, DIE_FORMS["arrow"]), "5 strzał")
+        self.assertEqual(count(1, DEFENCE_FORMS["shield"]), "1 tarczę")
+        self.assertEqual(count(3, DEFENCE_FORMS["helmet"]), "3 hełmy")
 
 
 if __name__ == "__main__":

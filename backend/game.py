@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 
 from die import Die
 from god import LEVELS, TARGET_OPPONENT, God, god_factory
-from pl import DIE_NAMES, damage
+from pl import DEFENCE_FORMS, DIE_FORMS, count, damage
 from player import Player
 
 
@@ -127,7 +127,7 @@ class Game:
             player.reset_round()
         self.stage = "dice"
         self.active_player = self.leader
-        self._log(f"Zaczyna {self.leader}", "round")
+        self._log(f"Zaczyna {self.leader}.", "round")
         self.roll_dice(self.players[self.leader])
 
     def roll_dice(self, player: Player) -> None:
@@ -143,20 +143,10 @@ class Game:
         indexes = set(selected)
         if any(i < 0 or i >= len(player.rolled_dice) for i in indexes):
             raise GameError("Nieprawidłowy wybór kości.")
-        last_throw = player.rzuty == 1
-        if last_throw:
+        if player.rzuty == 1:
             # Ostatni rzut: zostają wszystkie wylosowane kości
             indexes = set(range(len(player.rolled_dice)))
-        kept = [player.rolled_dice[i] for i in sorted(indexes)]
         player.choose_dice(sorted(indexes))
-
-        faces = ", ".join(DIE_NAMES.get(d.stat, d.stat) + (" (+mana)" if d.gives_mana else "") for d in kept)
-        if last_throw:
-            self._log(f"{player.name} bierze ostatni rzut: {faces}", "dice")
-        elif kept:
-            self._log(f"{player.name} odkłada: {faces}", "dice")
-        else:
-            self._log(f"{player.name} rzuca jeszcze raz wszystkimi kośćmi", "dice")
         self._next_dice_turn(player)
 
     def _next_dice_turn(self, player: Player) -> None:
@@ -169,12 +159,25 @@ class Game:
         else:
             self.stage = "gods"
             self.active_player = self.leader
+            # jeden wpis na gracza z tym, co ma na tę rundę, zamiast wpisu po każdym rzucie
+            leader = self.players[self.leader]
+            for p in (leader, self.opponent_of(leader)):
+                self._log(self._dice_summary(p), "dice")
+
+    @staticmethod
+    def _dice_summary(player: Player) -> str:
+        stats = player.dice_stats
+        parts = [count(stats[face], forms) for face, forms in DIE_FORMS.items() if stats[face]]
+        text = f"{player.name}: {', '.join(parts) if parts else 'bez broni i obrony'}."
+        if stats["mana"]:
+            text += f" Mana z kości: {stats['mana']}."
+        return text
 
     def choose_god(self, player_name: str, god_name: Optional[str], level: Optional[int]) -> None:
         player = self._require_turn(player_name, "gods")
         if god_name is None:
             player.choose_god(None, None)  # gracz pomija łaskę w tej rundzie
-            self._log(f"{player.name} pomija łaskę", "god")
+            self._log(f"{player.name} nie korzysta z łaski w tej rundzie.", "god")
         else:
             god = player.find_god(god_name) if isinstance(god_name, str) else None
             if god is None:
@@ -186,7 +189,7 @@ class Game:
                 raise GameError(f"Za mało many: {god.name} na poziomie {level} kosztuje {cost}, "
                                 f"a masz {player.mana_available}.")
             player.choose_god(god, level)
-            self._log(f"{player.name} wybiera łaskę: {god.name}, poziom {level}", "god")
+            self._log(f"{player.name} wybiera łaskę {god.genitive}, poziom {level} (koszt {cost} many).", "god")
 
         if player.name == self.leader:
             self.active_player = self.opponent_of(player).name
@@ -200,11 +203,14 @@ class Game:
         other = self.opponent_of(leader)
         order = [leader, other]
 
+        gains = []
         for player in order:
             gained = player.dice_stats["mana"]
             player.mana += gained
             if gained:
-                self._log(f"{player.name}: +{gained} many z kości, razem {player.mana}", "battle")
+                gains.append(f"{player.name} +{gained} (razem {player.mana})")
+        if gains:
+            self._log(f"Mana z kości trafia do puli: {', '.join(gains)}.", "battle")
 
         for player in order:
             self._activate_god(player)
@@ -227,26 +233,31 @@ class Game:
             return
         cost = god.cost(level)
         if player.mana < cost:
-            self._log(f"{player.name}: za mało many na {god.name} ({player.mana}/{cost}), łaska przepada", "battle")
+            self._log(f"{player.name} nie może użyć łaski {god.genitive}: za mało many ({player.mana} z {cost}).",
+                      "battle")
             return
         player.mana -= cost
         target = self.opponent_of(player) if god.target == TARGET_OPPONENT else player
-        hp_before = target.hp
         effect = god.activate(target, level)
-        hp_info = f", {target.name} ma {max(target.hp, 0)} HP" if target.hp != hp_before else ""
-        self._log(f"{player.name}: {effect} (koszt {cost} many{hp_info})", "battle")
+        self._log(f"{player.name} używa łaski {god.genitive}: {effect}.", "battle")
 
     def _log_attack(self, attacker: Player, defender: Player, result: Dict[str, int]) -> None:
         parts = []
         if result["arrow"]:
-            parts.append(f"strzały {result['arrow']} na tarcze {result['shield']}")
+            parts.append(f"{count(result['arrow'], DIE_FORMS['arrow'])} na "
+                         f"{count(result['shield'], DEFENCE_FORMS['shield'])}")
         if result["axe"]:
-            parts.append(f"topory {result['axe']} na hełmy {result['helmet']}")
+            parts.append(f"{count(result['axe'], DIE_FORMS['axe'])} na "
+                         f"{count(result['helmet'], DEFENCE_FORMS['helmet'])}")
         if not parts:
-            self._log(f"{attacker.name} nie ma czym atakować", "battle")
+            self._log(f"{attacker.name} nie atakuje: nie ma strzał ani toporów.", "battle")
             return
-        self._log(f"{attacker.name} atakuje ({', '.join(parts)}): {damage(result['dmg'])}, "
-                  f"{defender.name} ma {max(defender.hp, 0)} HP", "battle")
+        hp = max(defender.hp, 0)
+        if result["dmg"]:
+            outcome = f"Zadaje {damage(result['dmg'])}, {defender.name} ma teraz {hp} HP."
+        else:
+            outcome = f"Obrona blokuje wszystko, {defender.name} ma nadal {hp} HP."
+        self._log(f"{attacker.name} atakuje: {', '.join(parts)}. {outcome}", "battle")
 
     def _check_winner(self) -> bool:
         for player in self.players.values():
@@ -254,7 +265,7 @@ class Game:
                 self.winner = self.opponent_of(player)
                 self.stage = "finished"
                 self.active_player = None
-                self._log(f"{self.winner.name} wygrywa!", "win")
+                self._log(f"Koniec gry. Wygrywa {self.winner.name}.", "win")
                 return True
         return False
 

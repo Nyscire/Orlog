@@ -10,7 +10,10 @@
       :error="joinError"
       @join="join"
       @leave="leaveLobby"
+      @help="showHelp = true"
     />
+
+    <HelpDialog v-if="showHelp" @close="showHelp = false" />
 
     <div v-else class="game-interface">
       <transition name="toast">
@@ -37,6 +40,7 @@
           :opponent="opponent"
           :player="player"
           @new-game="newGame"
+          @help="showHelp = true"
         />
       </div>
 
@@ -60,6 +64,7 @@
 <script>
 import socket from '../socket';
 import StartMenu from './StartMenu.vue';
+import HelpDialog from './HelpDialog.vue';
 import OpponentSection from './OpponentSection.vue';
 import NeutralZone from './NeutralZone.vue';
 import PlayerSection from './PlayerSection.vue';
@@ -67,6 +72,7 @@ import PlayerSection from './PlayerSection.vue';
 export default {
   components: {
     StartMenu,
+    HelpDialog,
     OpponentSection,
     NeutralZone,
     PlayerSection
@@ -78,6 +84,7 @@ export default {
       data: {},
       lobby: null,
       connected: socket.connected,
+      showHelp: false,
       selectedDiceIndexes: [],
       joinError: '',
       errorMessage: '',
@@ -278,7 +285,7 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 1rem;
   box-sizing: border-box;
 }
 

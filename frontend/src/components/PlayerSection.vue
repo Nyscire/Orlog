@@ -9,8 +9,8 @@
       />
       <div class="player-status">
         <span v-if="canSelectDice || canSelectGod" class="turn-badge">Twoja tura</span>
-        <div class="rolls-counter" v-if="player.rzuty !== undefined" :title="`Zostało rzutów: ${player.rzuty}`">
-          <span class="rolls-text">Rzuty</span>
+        <div class="rolls-counter" v-if="player.rzuty > 0" title="Ile razy możesz jeszcze rzucić w tej rundzie">
+          <span class="rolls-text">Pozostałe rzuty: {{ player.rzuty }}</span>
           <span class="pips">
             <span v-for="i in 3" :key="i" class="pip" :class="{ used: i > player.rzuty }"></span>
           </span>
@@ -31,6 +31,7 @@
         <DiceDisplay
           :dice="player.rolled_dice || []"
           :selectable="canSelectDice"
+          labels
           :selected-indexes="selectedDiceIndexes"
           @toggle-selection="$emit('toggle-die-selection', $event)"
         />
@@ -197,7 +198,7 @@ export default {
 }
 
 .player-content {
-  padding: 0.5rem 0.75rem;
+  padding: 0.4rem 0.75rem;
   display: flex;
   align-items: flex-start;
   gap: 1.5rem;
@@ -207,7 +208,7 @@ export default {
 .gods-section {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: 0.35rem;
 }
 
 .dice-section {

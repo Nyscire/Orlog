@@ -12,9 +12,10 @@
       <div class="dice-section">
         <DiceDisplay
           :dice="opponent.rolled_dice || []"
-          title="Kości przeciwnika"
+          title="Rzut przeciwnika"
           :selectable="false"
           compact
+          tooltip-placement="below"
         />
       </div>
       
