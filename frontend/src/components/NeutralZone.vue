@@ -9,7 +9,15 @@
           <template v-if="activePlayer === player.name">Twoja tura</template>
           <template v-else>Ruch: <span class="active-player">{{ activePlayer }}</span></template>
         </div>
-        <button class="help-btn" @click="$emit('help')">Jak grać?</button>
+        <template v-if="!confirmLeave">
+          <button class="help-btn" @click="$emit('help')">Jak grać?</button>
+          <button class="help-btn" @click="confirmLeave = true">Opuść grę</button>
+        </template>
+        <span v-else class="leave-confirm">
+          Zakończyć partię dla obu graczy?
+          <button class="help-btn danger" @click="$emit('leave')">Tak, wyjdź</button>
+          <button class="help-btn" @click="confirmLeave = false">Nie</button>
+        </span>
       </div>
     </div>
 
@@ -97,7 +105,12 @@ export default {
       default: () => ({})
     }
   },
-  emits: ['new-game', 'help'],
+  emits: ['new-game', 'help', 'leave'],
+  data() {
+    return {
+      confirmLeave: false
+    }
+  },
   computed: {
     // podpowiedź, co teraz zrobić
     instruction() {
@@ -223,6 +236,20 @@ export default {
 
 .help-btn:hover {
   background: rgba(255, 255, 255, 0.85);
+}
+
+.help-btn.danger {
+  color: var(--parchment);
+  background: var(--blood);
+  border-color: rgba(0, 0, 0, 0.3);
+}
+
+.leave-confirm {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .dice-summary {

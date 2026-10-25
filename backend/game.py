@@ -161,8 +161,20 @@ class Game:
             self.active_player = self.leader
             # jeden wpis na gracza z tym, co ma na tę rundę, zamiast wpisu po każdym rzucie
             leader = self.players[self.leader]
-            for p in (leader, self.opponent_of(leader)):
+            order = (leader, self.opponent_of(leader))
+            for p in order:
                 self._log(self._dice_summary(p), "dice")
+            self._collect_mana(order)
+
+    def _collect_mana(self, order) -> None:
+        """Mana z kości trafia do puli od razu po rzutach, żeby było widać, ile można wydać na łaski."""
+        gains = []
+        for player in order:
+            gained = player.collect_dice_mana()
+            if gained:
+                gains.append(f"{player.name} +{gained} (razem {player.mana})")
+        if gains:
+            self._log(f"Mana z kości trafia do puli: {', '.join(gains)}.", "mana")
 
     @staticmethod
     def _dice_summary(player: Player) -> str:
@@ -203,14 +215,7 @@ class Game:
         other = self.opponent_of(leader)
         order = [leader, other]
 
-        gains = []
-        for player in order:
-            gained = player.dice_stats["mana"]
-            player.mana += gained
-            if gained:
-                gains.append(f"{player.name} +{gained} (razem {player.mana})")
-        if gains:
-            self._log(f"Mana z kości trafia do puli: {', '.join(gains)}.", "battle")
+        self._collect_mana(order)  # zwykle już zebrana po rzutach; tu tylko na wszelki wypadek
 
         for player in order:
             self._activate_god(player)

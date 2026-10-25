@@ -8,19 +8,30 @@
       :player-name="playerName"
       :chosen-gods="chosenGods"
       :error="joinError"
+      :notice="notice"
       @join="join"
       @leave="leaveLobby"
       @help="showHelp = true"
     />
 
-    <HelpDialog v-if="showHelp" @close="showHelp = false" />
-
+    <!-- v-else musi stać zaraz po StartMenu, inaczej dowiąże się do innego v-if -->
     <div v-else class="game-interface">
       <transition name="toast">
         <div v-if="errorMessage" class="error-toast" @click="errorMessage = ''">
           {{ errorMessage }}
         </div>
       </transition>
+
+      <div v-if="!connected" class="status-banner warn">
+        Utracono połączenie z serwerem. Próbuję połączyć ponownie…
+      </div>
+      <div v-else-if="opponentOffline" class="status-banner">
+        <span>
+          <strong>{{ opponent.name }}</strong> jest offline. Gra poczeka, aż przeciwnik wróci pod tym samym imieniem.
+          Możesz też zakończyć partię.
+        </span>
+        <button class="btn btn-gold banner-btn" @click="leaveGame">Zakończ partię</button>
+      </div>
 
       <!-- Opponent Section - Fixed at top -->
       <div class="section opponent-section">
@@ -41,6 +52,7 @@
           :player="player"
           @new-game="newGame"
           @help="showHelp = true"
+          @leave="leaveGame"
         />
       </div>
 
@@ -58,6 +70,8 @@
         />
       </div>
     </div>
+
+    <HelpDialog v-if="showHelp" @close="showHelp = false" />
   </div>
 </template>
 
@@ -87,6 +101,7 @@ export default {
       showHelp: false,
       selectedDiceIndexes: [],
       joinError: '',
+      notice: '',
       errorMessage: '',
       errorTimer: null
     }
@@ -95,6 +110,9 @@ export default {
     // menu startowe znika dopiero, gdy obaj gracze są w grze
     inGame() {
       return !!this.playerName && !!this.data.stage && this.data.stage !== 'waiting'
+    },
+    opponentOffline() {
+      return this.opponent.connected === false
     },
     player() {
       return this.data.players?.find(p => p.name === this.playerName) || {}
@@ -147,6 +165,12 @@ export default {
       this.joinError = message;
     });
 
+    // przeciwnik zakończył partię: wracamy do menu z informacją
+    socket.on('game_ended', (message) => {
+      this.resetToMenu();
+      this.notice = message;
+    });
+
     socket.on('error_message', (message) => {
       this.selectedDiceIndexes = [];
       this.showError(message);
@@ -158,20 +182,31 @@ export default {
     socket.off('lobby');
     socket.off('game_state');
     socket.off('join_rejected');
+    socket.off('game_ended');
     socket.off('error_message');
     clearTimeout(this.errorTimer);
   },
   methods: {
     join({ name, gods }) {
       this.joinError = '';
+      this.notice = '';
       this.playerName = name;
       this.chosenGods = gods;
       socket.emit('submit_player_name', { name, gods });
     },
     leaveLobby() {
       socket.emit('leave_lobby');
+      this.resetToMenu();
+    },
+    leaveGame() {
+      socket.emit('leave_game');
+      this.resetToMenu();
+    },
+    resetToMenu() {
       this.playerName = '';
       this.data = {};
+      this.selectedDiceIndexes = [];
+      this.notice = '';
     },
     showError(message) {
       this.errorMessage = message;
@@ -253,6 +288,36 @@ export default {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+
+.status-banner {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--gold-bright);
+  border-bottom: 1px solid var(--gold-dark);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.status-banner.warn {
+  color: var(--parchment);
+  background: var(--blood);
+  border-bottom-color: rgba(0, 0, 0, 0.3);
+}
+
+.banner-btn {
+  padding: 0.3rem 0.9rem;
+  font-size: 0.85rem;
+  background: var(--parchment);
 }
 
 .error-toast {

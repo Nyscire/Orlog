@@ -27,6 +27,8 @@ class Player:
         # Tymczasowe bonusy z łask bogów, ważne do końca rundy
         self.bonus_stats: Dict[str, int] = {}
         self.rzuty: int = self.THROWS
+        # czy mana z kości tej rundy jest już w puli
+        self.mana_collected: bool = False
 
     def find_god(self, god_name: str) -> Optional[God]:
         for god in self.gods:
@@ -82,7 +84,16 @@ class Player:
     @property
     def mana_available(self) -> int:
         """Mana, którą gracz będzie miał w chwili aktywacji łaski (przed walką)."""
-        return self.mana + self.dice_stats["mana"]
+        return self.mana if self.mana_collected else self.mana + self.dice_stats["mana"]
+
+    def collect_dice_mana(self) -> int:
+        """Dodaje do puli manę z odłożonych kości (raz na rundę) i zwraca, ile jej było."""
+        if self.mana_collected:
+            return 0
+        gained = self.dice_stats["mana"]
+        self.mana += gained
+        self.mana_collected = True
+        return gained
 
     def add_bonus(self, stat: str, value: int) -> None:
         self.bonus_stats[stat] = self.bonus_stats.get(stat, 0) + value
@@ -98,6 +109,7 @@ class Player:
         self.chosen_level = None
         self.bonus_stats = {}
         self.rzuty = self.THROWS
+        self.mana_collected = False
 
     def return_data(self) -> Dict[str, str | int | List | Dict | None]:
         if self.chosen_god:
