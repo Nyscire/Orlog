@@ -1,87 +1,117 @@
 from __future__ import annotations
 
-from typing import List,Optional,Dict
+import logging
+from typing import List, Optional, Dict
 from god import God
 from die import Die
 
+log = logging.getLogger(__name__)
+
+STATS = ("mana", "arrow", "axe", "shield", "helmet")
+
 
 class Player:
-    def __init__(self,name,gods) -> None:
-        self.name:int=name 
-        self.hp:int=21
-        self.mana:int=0
-        self.rolled_dice:List[Die]=[]
-        self.saved_dice:List[Die]=[]
-        self.gods:List[God]=gods
-        self.chosen_god:Optional[God]=None
-        self.rzuty=3
+    MAX_HP = 21
+    DICE_COUNT = 6
+    THROWS = 3
 
-        
+    def __init__(self, name: str, gods: List[God]) -> None:
+        self.name: str = name
+        self.hp: int = self.MAX_HP
+        self.mana: int = 0
+        self.rolled_dice: List[Die] = []
+        self.saved_dice: List[Die] = []
+        self.gods: List[God] = gods
+        self.chosen_god: Optional[God] = None
+        self.chosen_level: Optional[int] = None
+        # Tymczasowe bonusy z łask bogów, ważne do końca rundy
+        self.bonus_stats: Dict[str, int] = {}
+        self.rzuty: int = self.THROWS
 
-    def choose_dice(self,dice:List[int]) -> None:
-        print(f"Wylosowano:{self.rolled_dice}")
-        saved_dice = [elem for i, elem in enumerate(self.rolled_dice) if i  in dice]
+    def find_god(self, god_name: str) -> Optional[God]:
+        for god in self.gods:
+            if god.name == god_name:
+                return god
+        return None
+
+    def choose_dice(self, dice: List[int]) -> None:
+        saved_dice = [elem for i, elem in enumerate(self.rolled_dice) if i in dice]
         self.saved_dice.extend(saved_dice)
-        print(f"Zatwierdzono: {saved_dice}")
-        self.rolled_dice=[]
-        print(f"DEBUG {self.saved_dice=}")
-        self.rzuty-=1
+        log.debug("%s: wylosowano %s, zatwierdzono %s", self.name, self.rolled_dice, saved_dice)
+        self.rolled_dice = []
+        self.rzuty -= 1
+        # wszystkie kości zachowane, nie ma czym rzucać
+        if len(self.saved_dice) >= self.DICE_COUNT:
+            self.rzuty = 0
 
-    def attack(self,enemy:Player) -> None:
-        dmg=0
-        my_arrows=self.temp_stats["arrow"]
-        my_axes=self.temp_stats["axe"]
+    def attack(self, enemy: Player) -> int:
+        my_stats = self.temp_stats
+        enemy_stats = enemy.temp_stats
 
-        enemy_helmets=enemy.temp_stats["helmet"]
-        enemy_shields=enemy.temp_stats["shield"]
-
-        arrow_dmg=my_arrows-enemy_shields
-        axe_dmg=my_axes-enemy_helmets
-        dmg+=max(arrow_dmg,0)
-        dmg+=max(axe_dmg,0)
-        print(f"{self.temp_stats=}\n {enemy.temp_stats=}\n {arrow_dmg=}\t {axe_dmg=}\t{dmg=}")
-        enemy.hp-=dmg
-
-    @property
-    def can_roll(self):
-        return self.rzuty>0
-
+        arrow_dmg = max(my_stats["arrow"] - enemy_stats["shield"], 0)
+        axe_dmg = max(my_stats["axe"] - enemy_stats["helmet"], 0)
+        dmg = arrow_dmg + axe_dmg
+        log.debug("%s atakuje %s: strzały %d, topory %d, razem %d",
+                  self.name, enemy.name, arrow_dmg, axe_dmg, dmg)
+        enemy.hp -= dmg
+        return dmg
 
     @property
-    def temp_stats(self) ->Dict[str,int]:
-        stat_summary = {"mana": 0,
-                        "arrow":0,
-                        "axe":0,
-                        "shield":0,
-                        "helmet":0}
+    def can_roll(self) -> bool:
+        return self.rzuty > 0
 
+    @property
+    def dice_stats(self) -> Dict[str, int]:
+        """Statystyki wynikające wyłącznie z zachowanych kości."""
+        stat_summary = {stat: 0 for stat in STATS}
         for die in self.saved_dice:
-            if die.stat not in stat_summary:
-                stat_summary[die.stat] = 0
-            stat_summary[die.stat] += 1
+            stat_summary[die.stat] = stat_summary.get(die.stat, 0) + 1
             if die.gives_mana:
                 stat_summary["mana"] += 1
         return stat_summary
 
+    @property
+    def temp_stats(self) -> Dict[str, int]:
+        """Statystyki z kości powiększone o bonusy z łask bogów."""
+        stat_summary = self.dice_stats
+        for stat, value in self.bonus_stats.items():
+            stat_summary[stat] = stat_summary.get(stat, 0) + value
+        return stat_summary
 
-    def choose_god(self,god) -> None:
-        self.chosen_god=god
-        
-    def return_data(self) -> Dict[str,str|Dict|None]:
+    @property
+    def mana_available(self) -> int:
+        """Mana, którą gracz będzie miał w chwili aktywacji łaski (przed walką)."""
+        return self.mana + self.dice_stats["mana"]
+
+    def add_bonus(self, stat: str, value: int) -> None:
+        self.bonus_stats[stat] = self.bonus_stats.get(stat, 0) + value
+
+    def choose_god(self, god: Optional[God], level: Optional[int]) -> None:
+        self.chosen_god = god
+        self.chosen_level = level if god else None
+
+    def reset_round(self) -> None:
+        self.rolled_dice = []
+        self.saved_dice = []
+        self.chosen_god = None
+        self.chosen_level = None
+        self.bonus_stats = {}
+        self.rzuty = self.THROWS
+
+    def return_data(self) -> Dict[str, str | int | List | Dict | None]:
         if self.chosen_god:
-            chosen_god_data=self.chosen_god.return_data()
+            chosen_god_data = self.chosen_god.return_data(self.chosen_level)
         else:
-            chosen_god_data=None
-        data={"name":self.name,
-              "HP":self.hp,
-              "Mana":self.mana,
-              "rzuty":self.rzuty,
-              "rolled_dice":[die.return_data() for die in self.rolled_dice],
-              "saved_dice":[die.return_data() for die in self.saved_dice],
-              "gods":[god.return_data() for god in self.gods],
-              "chosen_god":chosen_god_data} 
-        
-        return data
-    
-    def __str__(self):
+            chosen_god_data = None
+        return {"name": self.name,
+                "HP": max(self.hp, 0),
+                "Mana": self.mana,
+                "mana_available": self.mana_available,
+                "rzuty": self.rzuty,
+                "rolled_dice": [die.return_data() for die in self.rolled_dice],
+                "saved_dice": [die.return_data() for die in self.saved_dice],
+                "gods": [god.return_data() for god in self.gods],
+                "chosen_god": chosen_god_data}
+
+    def __str__(self) -> str:
         return f"{self.name=}:{self.return_data()}"

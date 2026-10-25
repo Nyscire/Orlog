@@ -1,8 +1,14 @@
 <template>
   <div class="game-container">
-    <PlayerMenu v-if="!playerName" @name-submitted="submitName" />
+    <PlayerMenu v-if="!playerName" :error="joinError" @name-submitted="submitName" />
 
     <div v-else class="game-interface">
+      <transition name="toast">
+        <div v-if="errorMessage" class="error-toast" @click="errorMessage = ''">
+          {{ errorMessage }}
+        </div>
+      </transition>
+
       <!-- Opponent Section - Fixed at top -->
       <div class="section opponent-section">
         <OpponentSection 
@@ -15,8 +21,11 @@
         <NeutralZone
           :stage="data.stage"
           :active-player="data.active_player"
+          :winner="data.winner"
+          :round="data.round"
           :opponent="opponent"
           :player="player"
+          @new-game="newGame"
         />
       </div>
 
@@ -30,6 +39,7 @@
           @toggle-die-selection="toggleDieSelection"
           @confirm-dice="confirmDice"
           @choose-god="chooseGod"
+          @skip-god="skipGod"
         />
       </div>
     </div>
@@ -54,7 +64,10 @@ export default {
     return {
       playerName: '',
       data: {},
-      selectedDiceIndexes: []
+      selectedDiceIndexes: [],
+      joinError: '',
+      errorMessage: '',
+      errorTimer: null
     }
   },
   computed: {
@@ -80,16 +93,44 @@ export default {
   mounted() {
     socket.on('connect', () => {
       console.log('Połączono z serwerem Socket.IO');
+      // po reconnecie socket ma nowe ID, więc dołączamy jeszcze raz z tą samą nazwą
+      if (this.playerName) {
+        socket.emit('submit_player_name', this.playerName);
+      }
     });
 
     socket.on('game_state', (data) => {
       this.data = data
     });
+
+    socket.on('join_rejected', (message) => {
+      this.playerName = '';
+      this.data = {};
+      this.joinError = message;
+    });
+
+    socket.on('error_message', (message) => {
+      this.selectedDiceIndexes = [];
+      this.showError(message);
+    });
+  },
+  beforeUnmount() {
+    socket.off('connect');
+    socket.off('game_state');
+    socket.off('join_rejected');
+    socket.off('error_message');
+    clearTimeout(this.errorTimer);
   },
   methods: {
     submitName(name) {
+      this.joinError = '';
       this.playerName = name;
       socket.emit('submit_player_name', name);
+    },
+    showError(message) {
+      this.errorMessage = message;
+      clearTimeout(this.errorTimer);
+      this.errorTimer = setTimeout(() => { this.errorMessage = '' }, 4000);
     },
     toggleDieSelection(index) {
       const pos = this.selectedDiceIndexes.indexOf(index)
@@ -137,6 +178,17 @@ export default {
         godName,
         level
       });
+    },
+    skipGod() {
+      if (!this.canSelectGod) return;
+      socket.emit('choose_god', {
+        player: this.playerName,
+        godName: null,
+        level: null
+      });
+    },
+    newGame() {
+      socket.emit('new_game');
     }
   }
 }
@@ -155,6 +207,32 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  position: relative;
+}
+
+.error-toast {
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 0.6rem 1.2rem;
+  background: #c62828;
+  color: #fff;
+  font-weight: 600;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  cursor: pointer;
+}
+
+.toast-enter-active,
+.toast-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
 }
 
 .section {

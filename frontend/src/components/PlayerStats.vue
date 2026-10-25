@@ -3,7 +3,9 @@
     <div class="player-name">{{ name }}</div>
     <div class="stats">
       <div class="stat hp">HP: {{ hp }}</div>
-      <div class="stat mana">Mana: {{ mana }}</div>
+      <div class="stat mana" :title="pendingMana ? 'Mana z zachowanych kości trafi do puli przed walką' : ''">
+        Mana: {{ mana }}<span v-if="pendingMana" class="pending"> (+{{ pendingMana }})</span>
+      </div>
     </div>
     
   </div>
@@ -15,6 +17,10 @@ export default {
   name: String,
   hp: Number,
   mana: Number,
+  pendingMana: {
+    type: Number,
+    default: 0
+  }
 }
 
 }
@@ -40,6 +46,10 @@ export default {
   padding: 0.5rem 1rem;
   border: 1px solid #ccc;
   border-radius: 6px;
+}
+.pending {
+  color: #6f42c1;
+  font-weight: 600;
 }
 .gods-icons {
   display: flex;
