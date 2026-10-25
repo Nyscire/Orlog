@@ -3,8 +3,9 @@
     <div class="player-header">
       <PlayerStats 
         :name="player.name" 
-        :hp="player.HP" 
-        :mana="player.Mana" 
+        :hp="player.HP"
+        :mana="player.Mana"
+        :pending-mana="pendingMana"
       />
       <div class="player-status" v-if="player.rzuty !== undefined">
         <div class="rolls-counter">
@@ -32,13 +33,13 @@
         />
         
         <transition name="button-slide">
-          <div v-if="canSelectDice && selectedDiceIndexes?.length > 0" class="dice-actions">
-            <button 
-              class="confirm-dice-button" 
+          <div v-if="canSelectDice" class="dice-actions">
+            <button
+              class="confirm-dice-button"
               @click="$emit('confirm-dice')"
             >
               <span class="button-icon">✓</span>
-              Zatwierdź Wybrane ({{ selectedDiceIndexes.length }})
+              {{ confirmDiceLabel }}
             </button>
           </div>
         </transition>
@@ -58,8 +59,14 @@
             :gods="player.gods"
             :readonly="!canSelectGod"
             :chosen-god="player.chosen_god"
+            :mana="player.mana_available ?? player.Mana ?? 0"
             @choose-god="$emit('choose-god', $event)"
           />
+        </div>
+        <div v-if="canSelectGod" class="dice-actions">
+          <button class="skip-god-button" @click="$emit('skip-god')">
+            Pomiń łaskę w tej rundzie
+          </button>
         </div>
       </div>
     </div>
@@ -96,7 +103,17 @@ export default {
       default: () => []
     }
   },
-  emits: ['toggle-die-selection', 'confirm-dice', 'choose-god']
+  computed: {
+    pendingMana() {
+      return Math.max((this.player.mana_available ?? 0) - (this.player.Mana ?? 0), 0)
+    },
+    confirmDiceLabel() {
+      if (this.player.rzuty === 1) return 'Zachowaj wszystkie (ostatni rzut)'
+      const count = this.selectedDiceIndexes?.length || 0
+      return count > 0 ? `Zatwierdź wybrane (${count})` : 'Rzuć ponownie wszystkimi'
+    }
+  },
+  emits: ['toggle-die-selection', 'confirm-dice', 'choose-god', 'skip-god']
 }
 </script>
 
@@ -229,6 +246,21 @@ export default {
 .button-icon {
   font-size: 1.1rem;
   font-weight: bold;
+}
+
+.skip-god-button {
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: #fff;
+  color: #2e7d32;
+  border: 2px solid #4caf50;
+  border-radius: 25px;
+  font-size: 0.85rem;
+}
+
+.skip-god-button:hover {
+  background: #e8f5e9;
 }
 
 .gods-container {

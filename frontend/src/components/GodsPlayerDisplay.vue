@@ -14,6 +14,8 @@
           v-for="level in [1, 2, 3]"
           :key="level"
           :class="{ active: god.level === level }"
+          :disabled="!canAfford(god, level)"
+          :title="costLabel(god, level)"
           @click="selectLevel(god.name, level)"
           class="level-btn"
         >
@@ -47,9 +49,23 @@ export default {
   props: {
     gods: Array,
     readonly: Boolean,
-    chosenGod: Object
+    chosenGod: Object,
+    // Mana dostępna w chwili aktywacji łaski (zebrana + z zachowanych kości)
+    mana: {
+      type: Number,
+      default: 0
+    }
   },
   methods: {
+    cost(god, level) {
+      return god.mana_costs?.[level - 1] ?? 0;
+    },
+    canAfford(god, level) {
+      return this.cost(god, level) <= this.mana;
+    },
+    costLabel(god, level) {
+      return `Koszt: ${this.cost(god, level)} many`;
+    },
     selectLevel(godName, level) {
       this.gods.forEach(god => {
         god.level = god.name === godName ? level : null;
@@ -143,6 +159,11 @@ export default {
   background-color: #007bff;
   color: white;
   border-color: #007bff;
+}
+
+.level-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .confirm-btn {

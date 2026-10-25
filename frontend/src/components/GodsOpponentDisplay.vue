@@ -16,7 +16,7 @@
       <div
         class="tooltip-card"
       >
-        {{ god.level ? god.levels?.[god.level] : god.description }}
+        {{ god.level ? god.levels?.[god.level - 1] : god.description }}
       </div>
     </div>
   </div>

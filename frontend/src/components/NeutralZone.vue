@@ -2,7 +2,7 @@
   <div class="neutral-zone">
     <div class="stage-indicator">
       <div class="stage-badge" :class="stageClass">
-        {{ stageText }}
+        {{ stageText }}<span v-if="round && stage !== 'waiting'"> · Runda {{ round }}</span>
       </div>
       <div class="turn-indicator" v-if="activePlayer">
         Tura: <span class="active-player">{{ activePlayer }}</span>
@@ -63,6 +63,10 @@
       <div v-else-if="stage === 'battle'" class="instruction-text">
         Walka w toku! Sprawdź wyniki...
       </div>
+      <div v-else-if="stage === 'finished'" class="instruction-text game-over">
+        <span>{{ winner === player.name ? 'Wygrałeś!' : `Wygrywa ${winner}` }}</span>
+        <button class="new-game-button" @click="$emit('new-game')">Nowa partia</button>
+      </div>
     </div>
   </div>
 </template>
@@ -83,6 +87,8 @@ export default {
       default: 'waiting'
     },
     activePlayer: String,
+    winner: String,
+    round: Number,
     player: {
       type: Object,
       default: () => ({})
@@ -92,6 +98,7 @@ export default {
       default: () => ({})
     }
   },
+  emits: ['new-game'],
   computed: {
     stageText() {
       const stages = {
@@ -269,6 +276,25 @@ export default {
   font-size: 0.9rem;
   color: #3e2723;
   font-weight: 500;
+}
+
+.game-over {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.new-game-button {
+  padding: 0.5rem 1.25rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: linear-gradient(135deg, #4caf50, #388e3c);
+  color: white;
+  border: none;
+  border-radius: 25px;
 }
 
 /* Responsive adjustments */
