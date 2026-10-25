@@ -2,7 +2,7 @@ import random
 from typing import Dict, List, Optional
 
 from die import Die
-from god import LEVELS, TARGET_OPPONENT, god_factory
+from god import LEVELS, TARGET_OPPONENT, God, god_factory
 from pl import DIE_NAMES, damage
 from player import Player
 
@@ -16,6 +16,7 @@ class Game:
     MAX_PLAYERS = 2
     MAX_NAME_LENGTH = 20
     MAX_LOG = 150
+    GODS_PER_PLAYER = 3   # ilu bogów gracz zabiera do partii
 
     # Fazy gry: "waiting" -> ("dice" -> "gods" -> walka)* -> "finished"
     def __init__(self, rng: Optional[random.Random] = None) -> None:
@@ -60,7 +61,25 @@ class Game:
 
     # ---------- lobby ----------
 
-    def register_player(self, name: str) -> Player:
+    @classmethod
+    def pick_gods(cls, names: Optional[List[str]] = None) -> List[God]:
+        """Bogowie wybrani przez gracza w menu; bez wyboru pierwsi z listy."""
+        catalog = god_factory()
+        if names is None:
+            return catalog[:cls.GODS_PER_PLAYER]
+        if not isinstance(names, list) or not all(isinstance(n, str) for n in names):
+            raise GameError("Nieprawidłowy wybór bogów.")
+        if len(set(names)) != len(names):
+            raise GameError("Każdego boga można wybrać tylko raz.")
+        if not 1 <= len(names) <= cls.GODS_PER_PLAYER:
+            raise GameError(f"Wybierz od 1 do {cls.GODS_PER_PLAYER} bogów.")
+        known = {god.name for god in catalog}
+        for name in names:
+            if name not in known:
+                raise GameError(f"Nie ma boga {name}.")
+        return [god for god in catalog if god.name in names]
+
+    def register_player(self, name: str, god_names: Optional[List[str]] = None) -> Player:
         name = (name or "").strip()
         if not name:
             raise GameError("Podaj nazwę gracza.")
@@ -70,9 +89,16 @@ class Game:
             raise GameError("Ta nazwa jest już zajęta.")
         if self.is_full:
             raise GameError("Gra jest już pełna.")
-        player = Player(name, god_factory())
+        player = Player(name, self.pick_gods(god_names))
         self.players[name] = player
         return player
+
+    def remove_waiting_player(self, name: str) -> bool:
+        """Wyjście z lobby przed startem gry."""
+        if self.stage == "waiting" and name in self.players:
+            del self.players[name]
+            return True
+        return False
 
     def start(self) -> None:
         if not self.can_start:
@@ -85,7 +111,9 @@ class Game:
         if self.stage != "finished" or self.winner is None:
             raise GameError("Partia jeszcze trwa.")
         loser = self.opponent_of(self.winner)
-        self.players = {name: Player(name, god_factory()) for name in self.players}
+        # każdy zostaje przy bogach wybranych w menu
+        self.players = {name: Player(name, self.pick_gods([g.name for g in p.gods]))
+                        for name, p in self.players.items()}
         self.round = 1
         self.winner = None
         self.leader = loser.name
@@ -231,6 +259,13 @@ class Game:
         return False
 
     # ---------- stan dla klientów ----------
+
+    def lobby_data(self) -> Dict[str, object]:
+        """Dane do menu startowego: dostępni bogowie i kto już jest w grze."""
+        return {"gods": [god.return_data() for god in god_factory()],
+                "max_gods": self.GODS_PER_PLAYER,
+                "players": list(self.players),
+                "stage": self.stage}
 
     def return_data(self) -> Dict[str, str | int | List | None]:
         return {"players": [player.return_data() for player in self.players.values()],

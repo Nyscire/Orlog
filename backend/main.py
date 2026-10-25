@@ -29,6 +29,7 @@ def is_connected(name: str) -> bool:
 
 def broadcast_state() -> None:
     socketio.emit('game_state', game.return_data())
+    socketio.emit('lobby', game.lobby_data())
 
 
 def send_error(message: str) -> None:
@@ -50,8 +51,23 @@ def run_action(action: Callable[[str], None]) -> None:
     broadcast_state()
 
 
+@socketio.on('connect')
+def handle_connect(*_):
+    emit('lobby', game.lobby_data())
+
+
+@socketio.on('get_lobby')
+def handle_get_lobby(*_):
+    emit('lobby', game.lobby_data())
+
+
 @socketio.on('submit_player_name')
-def handle_submit_player_name(name):
+def handle_submit_player_name(data):
+    # z menu przychodzi {"name": ..., "gods": [...]}; sama nazwa też działa
+    if isinstance(data, dict):
+        name, god_names = data.get('name'), data.get('gods')
+    else:
+        name, god_names = data, None
     if not isinstance(name, str) or not name.strip():
         emit('join_rejected', 'Podaj nazwę gracza.')
         return
@@ -78,7 +94,7 @@ def handle_submit_player_name(name):
         reset_server()
 
     try:
-        game.register_player(name)
+        game.register_player(name, god_names)
     except GameError as err:
         emit('join_rejected', str(err))
         return
@@ -98,8 +114,16 @@ def handle_disconnect(*_):
         return
     log.info("Gracz rozłączony: %s", name)
     # W lobby zwalniamy miejsce, żeby nowa osoba nie czekała na kogoś, kto wyszedł
-    if game.stage == "waiting" and name in game.players and not is_connected(name):
-        del game.players[name]
+    if not is_connected(name) and game.remove_waiting_player(name):
+        broadcast_state()
+
+
+@socketio.on('leave_lobby')
+def handle_leave_lobby(*_):
+    name = sid_to_player.get(request.sid)
+    if name is not None and game.remove_waiting_player(name):
+        sid_to_player.pop(request.sid, None)
+        log.info("Gracz wyszedł z lobby: %s", name)
         broadcast_state()
 
 
