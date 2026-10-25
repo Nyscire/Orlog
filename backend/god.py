@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Optional, List, Dict, TYPE_CHECKING
 
+from pl import damage
+
 if TYPE_CHECKING:
     from player import Player
 
@@ -25,7 +27,8 @@ class God:
     def cost(self, level: int) -> int:
         return self.mana_costs[level - 1]
 
-    def activate(self, target: Player, level: int) -> None:
+    def activate(self, target: Player, level: int) -> str:
+        """Działa na gracza i zwraca opis efektu do dziennika."""
         raise NotImplementedError
 
     def return_data(self, level: Optional[int] = None) -> Dict[str, str | List | int | None]:
@@ -42,29 +45,37 @@ class God:
 class Thor(God):
     VALUES = [3, 5, 8]
 
-    def activate(self, target: Player, level: int) -> None:
-        target.hp -= self.VALUES[level - 1]
+    def activate(self, target: Player, level: int) -> str:
+        value = self.VALUES[level - 1]
+        target.hp -= value
+        return f"Thor zadaje {damage(value)} graczowi {target.name}"
 
 
 class Freya(God):
     VALUES = [2, 5, 9]
 
-    def activate(self, target: Player, level: int) -> None:
-        target.hp += self.VALUES[level - 1]
+    def activate(self, target: Player, level: int) -> str:
+        value = self.VALUES[level - 1]
+        target.hp += value
+        return f"Freya leczy o {value} HP"
 
 
 class Heimdall(God):
     VALUES = [1, 2, 3]
 
-    def activate(self, target: Player, level: int) -> None:
-        target.add_bonus("axe", self.VALUES[level - 1])
+    def activate(self, target: Player, level: int) -> str:
+        value = self.VALUES[level - 1]
+        target.add_bonus("axe", value)
+        return f"Heimdall daje +{value} do toporów"
 
 
 class Loki(God):
     VALUES = [1, 2, 3]
 
-    def activate(self, target: Player, level: int) -> None:
-        target.add_bonus("helmet", self.VALUES[level - 1])
+    def activate(self, target: Player, level: int) -> str:
+        value = self.VALUES[level - 1]
+        target.add_bonus("helmet", value)
+        return f"Loki daje +{value} do hełmów"
 
 
 def god_factory() -> List[God]:

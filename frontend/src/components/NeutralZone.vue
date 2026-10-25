@@ -44,6 +44,8 @@
       </div>
     </div>
 
+    <EventLog :entries="log" />
+
     <!-- Stage Instructions -->
     <div class="instructions">
       <div v-if="stage === 'dice'" class="instruction-text">
@@ -76,12 +78,14 @@
 <script>
 import DiceDisplay from './DiceDisplay.vue'
 import GodsNeutralDisplay from './GodsNeutralDisplay.vue'
+import EventLog from './EventLog.vue'
 
 export default {
   name: 'NeutralZone',
   components: {
     DiceDisplay,
-    GodsNeutralDisplay
+    GodsNeutralDisplay,
+    EventLog
   },
   props: {
     stage: {
@@ -91,6 +95,10 @@ export default {
     activePlayer: String,
     winner: String,
     round: Number,
+    log: {
+      type: Array,
+      default: () => []
+    },
     player: {
       type: Object,
       default: () => ({})
@@ -199,7 +207,7 @@ export default {
 
 /* [bóg][kości]  VS  [kości][bóg] */
 .battle-arena {
-  flex: 1;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,6 +276,12 @@ export default {
 @keyframes vsRotate {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* dziennik zajmuje wolne miejsce w środku, a jak wpisów jest więcej, przewija się w środku */
+.event-log {
+  flex: 1 1 0;
+  min-height: 5.5rem;
 }
 
 .instructions {

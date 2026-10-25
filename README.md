@@ -33,6 +33,8 @@ VITE_BACKEND_URL=http://192.168.0.10:5000
 - Walka: najpierw działają łaski, potem atakuje gracz kierujący, a po nim drugi. Tarcze blokują strzały, hełmy blokują topory.
 - W kolejnej rundzie kieruje drugi gracz. Gra kończy się, gdy ktoś spadnie do 0 HP, i można od razu zagrać rewanż.
 
+W środku planszy jest dziennik: kto co odłożył, jakie łaski wybrał, ile many dostał i ile zadał obrażeń.
+
 Po odświeżeniu strony wystarczy wpisać tę samą nazwę, żeby wrócić do gry. Serwer obsługuje jedną grę naraz.
 
 ## Testy
