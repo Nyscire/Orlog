@@ -6,7 +6,7 @@
         Tu pojawią się ruchy graczy i wyniki walk.
       </div>
       <div v-for="r in rounds" :key="r.round" class="log-round">
-        <div class="round-label">Runda {{ r.round }}</div>
+        <div class="round-label">Runda {{ r.round }}<span v-if="r.title" class="round-sub">{{ r.title }}</span></div>
         <div
           v-for="(entry, i) in r.entries"
           :key="i"
@@ -30,12 +30,17 @@ export default {
     }
   },
   computed: {
+    // wpis "Zaczyna X." trafia do nagłówka rundy, reszta pod nim
     rounds() {
       const groups = []
       for (const entry of this.entries) {
-        const last = groups[groups.length - 1]
-        if (last && last.round === entry.round) last.entries.push(entry)
-        else groups.push({ round: entry.round, entries: [entry] })
+        let group = groups[groups.length - 1]
+        if (!group || group.round !== entry.round) {
+          group = { round: entry.round, title: '', entries: [] }
+          groups.push(group)
+        }
+        if (entry.kind === 'round') group.title = entry.text.replace(/\.$/, '')
+        else group.entries.push(entry)
       }
       return groups
     }
@@ -103,6 +108,13 @@ export default {
   font-weight: 700;
   font-size: 0.75rem;
   color: var(--gold-dark);
+}
+
+.round-sub {
+  margin-left: 0.5rem;
+  font-family: var(--font-body);
+  font-weight: 400;
+  color: var(--ink-soft);
 }
 
 /* kolorowa kropka zamiast kolorowego tekstu, żeby dało się to czytać */

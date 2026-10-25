@@ -1,11 +1,15 @@
-"""Drobne pomocnicze rzeczy do polskich tekstów w dzienniku gry."""
+"""Polskie teksty do dziennika gry: nazwy kości i odmiana po liczebniku."""
 
-DIE_NAMES = {
-    "axe": "topór",
-    "arrow": "strzała",
-    "helmet": "hełm",
-    "shield": "tarcza",
-    "mana": "mana",
+# mianownik: "2 topory"; biernik obrony: "na 1 tarczę"
+DIE_FORMS = {
+    "axe": ("topór", "topory", "toporów"),
+    "arrow": ("strzała", "strzały", "strzał"),
+    "helmet": ("hełm", "hełmy", "hełmów"),
+    "shield": ("tarcza", "tarcze", "tarcz"),
+}
+DEFENCE_FORMS = {
+    "helmet": ("hełm", "hełmy", "hełmów"),
+    "shield": ("tarczę", "tarcze", "tarcz"),
 }
 
 
@@ -16,6 +20,10 @@ def plural(n: int, one: str, few: str, many: str) -> str:
     if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
         return few
     return many
+
+
+def count(n: int, forms: tuple) -> str:
+    return f"{n} {plural(n, *forms)}"
 
 
 def damage(n: int) -> str:
