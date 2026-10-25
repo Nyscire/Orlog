@@ -91,12 +91,12 @@ export default {
 }
 
 .god-card {
-  border: 2px solid #ccc;
+  border: 1.5px solid var(--parchment-3);
   border-radius: 8px;
   padding: 0.4rem 0.5rem;
   width: 160px;
   box-sizing: border-box;
-  background: #fff;
+  background: #fbf5e6;
   position: relative;
   transition: all 0.2s ease;
   display: flex;
@@ -112,9 +112,9 @@ export default {
 }
 
 .god-card.selected {
-  border-color: #007bff;
-  background: #e7f3ff;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  border-color: var(--gold);
+  background: #fff4d6;
+  box-shadow: 0 0 0 2px rgba(201, 162, 76, 0.45);
 }
 
 .god-header {
@@ -125,8 +125,9 @@ export default {
 
 .god-name {
   margin: 0;
+  font-family: var(--font-title);
   font-size: 0.95rem;
-  color: #495057;
+  color: var(--ink);
 }
 
 .god-icon {
@@ -144,22 +145,24 @@ export default {
 .level-btn {
   padding: 0.2rem 0.4rem;
   font-size: 0.75rem;
+  font-weight: 700;
   cursor: pointer;
+  color: var(--ink);
   border-radius: 4px;
-  border: 1px solid #aaa;
-  background-color: #f8f9fa;
+  border: 1px solid var(--edge);
+  background-color: #fffaf0;
   transition: all 0.2s ease;
   min-width: 24px;
 }
 
-.level-btn:hover {
-  background-color: #e9ecef;
+.level-btn:hover:not(:disabled) {
+  background-color: var(--parchment-2);
 }
 
 .level-btn.active {
-  background-color: #007bff;
-  color: white;
-  border-color: #007bff;
+  background-color: var(--ink);
+  color: var(--parchment);
+  border-color: var(--ink);
 }
 
 .level-btn:disabled {
@@ -171,20 +174,17 @@ export default {
   padding: 0.2rem 0.5rem;
   font-size: 0.75rem;
   font-weight: bold;
-  background-color: #28a745;
-  color: white;
-  border: none;
+  color: var(--wood-900);
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border: 1px solid var(--gold-dark);
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.confirm-btn:hover:not(:disabled) {
-  background-color: #218838;
 }
 
 .confirm-btn:disabled {
-  background-color: #6c757d;
+  color: var(--ink-soft);
+  background: var(--parchment-3);
+  border-color: var(--parchment-3);
   cursor: not-allowed;
 }
 
@@ -203,10 +203,11 @@ export default {
   width: 180px;
   margin-bottom: 6px;
   padding: 8px;
-  background: #fff;
-  border: 1px solid #ddd;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 1px solid var(--edge);
   border-radius: 6px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   font-size: 13px;
   white-space: pre-wrap;
   z-index: 20;

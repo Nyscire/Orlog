@@ -1,6 +1,16 @@
 <template>
   <div class="game-container">
-    <PlayerMenu v-if="!playerName" :error="joinError" @name-submitted="submitName" />
+    <StartMenu
+      v-if="!inGame"
+      :lobby="lobby"
+      :connected="connected"
+      :joined="!!playerName"
+      :player-name="playerName"
+      :chosen-gods="chosenGods"
+      :error="joinError"
+      @join="join"
+      @leave="leaveLobby"
+    />
 
     <div v-else class="game-interface">
       <transition name="toast">
@@ -49,14 +59,14 @@
 
 <script>
 import socket from '../socket';
-import PlayerMenu from './PlayerMenu.vue';
+import StartMenu from './StartMenu.vue';
 import OpponentSection from './OpponentSection.vue';
 import NeutralZone from './NeutralZone.vue';
 import PlayerSection from './PlayerSection.vue';
 
 export default {
   components: {
-    PlayerMenu,
+    StartMenu,
     OpponentSection,
     NeutralZone,
     PlayerSection
@@ -64,7 +74,10 @@ export default {
   data() {
     return {
       playerName: '',
+      chosenGods: [],
       data: {},
+      lobby: null,
+      connected: socket.connected,
       selectedDiceIndexes: [],
       joinError: '',
       errorMessage: '',
@@ -72,6 +85,10 @@ export default {
     }
   },
   computed: {
+    // menu startowe znika dopiero, gdy obaj gracze są w grze
+    inGame() {
+      return !!this.playerName && !!this.data.stage && this.data.stage !== 'waiting'
+    },
     player() {
       return this.data.players?.find(p => p.name === this.playerName) || {}
     },
@@ -93,12 +110,25 @@ export default {
   },
   mounted() {
     socket.on('connect', () => {
-      console.log('Połączono z serwerem Socket.IO');
+      this.connected = true;
       // po reconnecie socket ma nowe ID, więc dołączamy jeszcze raz z tą samą nazwą
       if (this.playerName) {
-        socket.emit('submit_player_name', this.playerName);
+        socket.emit('submit_player_name', { name: this.playerName, gods: this.chosenGods });
       }
     });
+
+    socket.on('disconnect', () => {
+      this.connected = false;
+    });
+
+    socket.on('lobby', (lobby) => {
+      this.lobby = lobby;
+    });
+
+    // połączenie mogło się zestawić, zanim komponent się zamontował
+    if (socket.connected) {
+      socket.emit('get_lobby');
+    }
 
     socket.on('game_state', (data) => {
       this.data = data
@@ -117,16 +147,24 @@ export default {
   },
   beforeUnmount() {
     socket.off('connect');
+    socket.off('disconnect');
+    socket.off('lobby');
     socket.off('game_state');
     socket.off('join_rejected');
     socket.off('error_message');
     clearTimeout(this.errorTimer);
   },
   methods: {
-    submitName(name) {
+    join({ name, gods }) {
       this.joinError = '';
       this.playerName = name;
-      socket.emit('submit_player_name', name);
+      this.chosenGods = gods;
+      socket.emit('submit_player_name', { name, gods });
+    },
+    leaveLobby() {
+      socket.emit('leave_lobby');
+      this.playerName = '';
+      this.data = {};
     },
     showError(message) {
       this.errorMessage = message;
@@ -217,8 +255,9 @@ export default {
   transform: translateX(-50%);
   z-index: 100;
   padding: 0.6rem 1.2rem;
-  background: #c62828;
-  color: #fff;
+  background: var(--blood);
+  color: var(--parchment);
+  border: 1px solid rgba(0, 0, 0, 0.3);
   font-weight: 600;
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
@@ -243,22 +282,22 @@ export default {
   box-sizing: border-box;
 }
 
+/* przeciwnik na ciemnym pasie, środek i gracz na pergaminie */
 .opponent-section {
   flex: 0 0 auto;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 2px solid #dee2e6;
+  color: var(--parchment);
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.15));
+  border-bottom: 1px solid rgba(201, 162, 76, 0.35);
 }
 
 /* środek zajmuje to, co zostaje z wysokości ekranu */
 .neutral-section {
   flex: 1 0 auto;
-  background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
-  border-bottom: 2px solid #dee2e6;
 }
 
 .player-section {
   flex: 0 0 auto;
-  background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+  padding-top: 0;
 }
 
 @media (max-width: 600px) {

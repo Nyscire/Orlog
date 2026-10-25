@@ -32,12 +32,13 @@ export default {
 .god-card {
   position: relative;
   overflow: visible;
-  border: 2px solid #ccc;
+  border: 1.5px solid var(--gold);
   border-radius: 0.5rem;
   padding: 0.4rem 0.5rem;
   box-sizing: border-box;
   width: 110px;
-  background: #fff;
+  color: var(--ink);
+  background: #fff4d6;
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
@@ -50,12 +51,14 @@ export default {
 
 .god-name {
   margin: 0;
+  font-family: var(--font-title);
   font-size: 0.95rem;
 }
 
 .god-level {
   font-size: 0.75rem;
-  color: #555;
+  font-weight: 700;
+  color: var(--gold-dark);
 }
 
 .tooltip-card {
@@ -64,8 +67,9 @@ export default {
   left: 50%;
   transform: translateX(-50%);
   width: 180px;
-  background: #fff;
-  border: 1px solid #ddd;
+  color: var(--ink);
+  background: var(--parchment);
+  border: 1px solid var(--edge);
   border-radius: 6px;
   box-shadow: 0 0 6px rgba(0, 0, 0, 0.1);
   font-size: 13px;

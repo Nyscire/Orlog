@@ -5,7 +5,8 @@
         {{ stageText }}<span v-if="round && stage !== 'waiting'"> · Runda {{ round }}</span>
       </div>
       <div class="turn-indicator" v-if="activePlayer">
-        Tura: <span class="active-player">{{ activePlayer }}</span>
+        <template v-if="activePlayer === player.name">Twoja tura</template>
+        <template v-else>Tura: <span class="active-player">{{ activePlayer }}</span></template>
       </div>
     </div>
 
@@ -69,7 +70,7 @@
       </div>
       <div v-else-if="stage === 'finished'" class="instruction-text game-over">
         <span>{{ winner === player.name ? 'Wygrałeś!' : `Wygrywa ${winner}` }}</span>
-        <button class="new-game-button" @click="$emit('new-game')">Nowa partia</button>
+        <button class="btn btn-gold new-game-button" @click="$emit('new-game')">Nowa partia</button>
       </div>
     </div>
   </div>
@@ -134,15 +135,17 @@ export default {
 </script>
 
 <style scoped>
+/* stół do gry: jasny pergamin z ciemniejszymi brzegami */
 .neutral-zone {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
   padding: 0.5rem 1rem;
-  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 50%, #ffe082 100%);
+  background: radial-gradient(ellipse at 50% 40%, #faf3e2 0%, var(--parchment) 45%, var(--parchment-2) 100%);
+  border: 1px solid var(--edge);
   border-radius: 12px;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 0 30px rgba(140, 106, 44, 0.18), 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .stage-indicator {
@@ -154,39 +157,36 @@ export default {
 }
 
 .stage-badge {
-  padding: 0.35rem 0.9rem;
-  border-radius: 20px;
-  font-weight: bold;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  font-family: var(--font-title);
+  font-weight: 700;
   font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.06em;
+  color: var(--parchment);
+  border: 1px solid rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .stage-waiting {
-  background: linear-gradient(135deg, #9e9e9e, #757575);
-  color: white;
+  background: var(--ink-soft);
 }
 
 .stage-dice {
-  background: linear-gradient(135deg, #2196f3, #1976d2);
-  color: white;
+  background: var(--rune);
 }
 
 .stage-gods {
-  background: linear-gradient(135deg, #9c27b0, #7b1fa2);
-  color: white;
+  background: var(--violet);
 }
 
 .stage-battle {
-  background: linear-gradient(135deg, #f44336, #d32f2f);
-  color: white;
+  background: var(--blood);
   animation: battlePulse 2s ease-in-out infinite;
 }
 
 .stage-finished {
-  background: linear-gradient(135deg, #4caf50, #388e3c);
-  color: white;
+  background: var(--moss);
 }
 
 @keyframes battlePulse {
@@ -195,14 +195,14 @@ export default {
 }
 
 .turn-indicator {
+  font-family: var(--font-title);
+  font-weight: 700;
   font-size: 0.9rem;
-  color: #5d4037;
+  color: var(--ink);
 }
 
 .active-player {
-  font-weight: bold;
-  color: #d32f2f;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  color: var(--blood);
 }
 
 /* [bóg][kości]  VS  [kości][bóg] */
@@ -227,11 +227,10 @@ export default {
 }
 
 .saved-dice-area {
-  background: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.4);
   padding: 0.5rem 0.75rem;
+  border: 1px dashed var(--edge);
   border-radius: 12px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
   box-sizing: border-box;
   width: 320px;
   max-width: 100%;
@@ -240,15 +239,13 @@ export default {
 .saved-dice-area h4 {
   margin: 0 0 0.35rem 0;
   text-align: center;
-  color: #3e2723;
-  font-size: 0.85rem;
+  font-family: var(--font-title);
+  color: var(--ink-soft);
+  font-size: 0.8rem;
 }
 
 .chosen-god-area {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.35rem;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  padding: 0.25rem;
 }
 
 .vs-divider {
@@ -258,24 +255,21 @@ export default {
   flex: 0 0 56px;
 }
 
+/* nieruchomy znak VS, żeby dało się go przeczytać */
 .vs-circle {
-  width: 48px;
-  height: 48px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #ff5722, #d84315);
-  color: white;
+  background: radial-gradient(circle at 40% 35%, var(--wood-600), var(--wood-900));
+  color: var(--gold-bright);
+  border: 2px solid var(--gold);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: bold;
-  font-size: 1rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  animation: vsRotate 4s linear infinite;
-}
-
-@keyframes vsRotate {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  font-family: var(--font-title);
+  font-weight: 900;
+  font-size: 0.95rem;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* dziennik zajmuje wolne miejsce w środku, a jak wpisów jest więcej, przewija się w środku */
@@ -285,17 +279,15 @@ export default {
 }
 
 .instructions {
-  background: rgba(255, 255, 255, 0.9);
-  padding: 0.5rem 0.75rem;
+  background: rgba(43, 29, 18, 0.06);
+  padding: 0.45rem 0.75rem;
   border-radius: 8px;
   text-align: center;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(5px);
 }
 
 .instruction-text {
   font-size: 0.9rem;
-  color: #3e2723;
+  color: var(--ink);
   font-weight: 500;
 }
 
@@ -304,18 +296,10 @@ export default {
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  font-size: 1.1rem;
-  font-weight: 700;
-}
-
-.new-game-button {
-  padding: 0.5rem 1.25rem;
-  font-weight: 600;
-  cursor: pointer;
-  background: linear-gradient(135deg, #4caf50, #388e3c);
-  color: white;
-  border: none;
-  border-radius: 25px;
+  font-family: var(--font-title);
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--gold-dark);
 }
 
 /* wąskie ekrany: strony jedna pod drugą */

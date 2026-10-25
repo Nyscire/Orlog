@@ -256,6 +256,59 @@ class TestLog(GameTestCase):
         self.assertEqual(len(self.game.log), Game.MAX_LOG)
 
 
+class TestGodSelection(unittest.TestCase):
+    def test_player_gets_chosen_gods_in_catalog_order(self):
+        game = Game()
+        player = game.register_player("A", ["Heimdall", "Thor"])
+        self.assertEqual([g.name for g in player.gods], ["Thor", "Heimdall"])
+
+    def test_default_is_first_gods_from_catalog(self):
+        game = Game()
+        player = game.register_player("A")
+        self.assertEqual(len(player.gods), min(Game.GODS_PER_PLAYER, len(god_factory())))
+
+    def test_invalid_selections_are_rejected(self):
+        for names in ([], ["Thor", "Thor"], ["Zeus"], "Thor", [1], ["Thor", "Freya", "Heimdall", "Loki"]):
+            with self.assertRaises(GameError, msg=repr(names)):
+                Game().register_player("A", names)
+
+    def test_only_chosen_gods_can_be_used(self):
+        game = Game()
+        a = game.register_player("A", ["Freya"])
+        game.register_player("B")
+        game.start()
+        a.mana = 10
+        for _ in range(3):
+            game.confirm_dice(game.active_player, [])
+            game.confirm_dice(game.active_player, [])
+        with self.assertRaises(GameError):
+            game.choose_god("A", "Thor", 1)
+        game.choose_god("A", "Freya", 1)
+
+    def test_rematch_keeps_chosen_gods(self):
+        game = Game()
+        a = game.register_player("A", ["Freya"])
+        game.register_player("B", ["Thor", "Heimdall"])
+        game.start()
+        a.hp = 0
+        game._check_winner()
+        game.rematch()
+        self.assertEqual([g.name for g in game.players["A"].gods], ["Freya"])
+        self.assertEqual([g.name for g in game.players["B"].gods], ["Thor", "Heimdall"])
+
+    def test_lobby_data_and_leaving(self):
+        game = Game()
+        game.register_player("A")
+        lobby = game.lobby_data()
+        self.assertEqual(lobby["players"], ["A"])
+        self.assertEqual(lobby["max_gods"], Game.GODS_PER_PLAYER)
+        self.assertEqual([g["name"] for g in lobby["gods"]], [g.name for g in god_factory()])
+        self.assertTrue(game.remove_waiting_player("A"))
+        self.assertEqual(game.lobby_data()["players"], [])
+        game.register_player("A"); game.register_player("B"); game.start()
+        self.assertFalse(game.remove_waiting_player("A"))
+
+
 class TestPolish(unittest.TestCase):
     def test_damage_forms(self):
         from pl import damage

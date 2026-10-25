@@ -11,7 +11,6 @@ html, body {
   margin: 0;
   padding: 0;
   min-height: 100%;
-  background-color: #f8f9fa;
 }
 
 #app {

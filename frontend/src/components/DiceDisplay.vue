@@ -71,6 +71,8 @@ export default {
 h3,h4 {
   text-align: center;
   margin: 0 0 0.35rem;
-  font-size: 0.85rem;
+  font-family: var(--font-title);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
 }
 </style>
