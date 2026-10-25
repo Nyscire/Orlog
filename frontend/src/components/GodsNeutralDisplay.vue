@@ -2,11 +2,11 @@
   <div class="god-card neutral-god-card">
     <h4 class="god-name">{{ god.name }}</h4>
     <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
-    <div class="god-level" v-if="god.level">Poziom {{ god.level }}</div>
+    <div class="god-level" v-if="god.level">{{ $t('gods.level', { level: god.level }) }}</div>
 
     <!-- Tooltip – wyświetlany przy hover -->
     <div class="tooltip-card" :class="`tooltip-${tooltipAlign}`">
-      {{ god.level ? god.levels?.[god.level-1] : god.description }}
+      {{ god.level ? $t('gods.levelEffect', { god: god, level: god.level }) : $t('gods.describe', god) }}
     </div>
   </div>
 </template>
@@ -38,7 +38,7 @@ export default {
   box-sizing: border-box;
   width: 110px;
   color: var(--ink);
-  background: #fff4d6;
+  background: var(--card-hi);
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
 }

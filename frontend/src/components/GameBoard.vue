@@ -7,30 +7,28 @@
       :joined="!!playerName"
       :player-name="playerName"
       :chosen-gods="chosenGods"
-      :error="joinError"
-      :notice="notice"
+      :error="errorText(joinError)"
+      :notice="errorText(notice)"
       @join="join"
       @leave="leaveLobby"
       @help="showHelp = true"
+      @settings="showSettings = true"
     />
 
     <!-- v-else musi stać zaraz po StartMenu, inaczej dowiąże się do innego v-if -->
     <div v-else class="game-interface">
       <transition name="toast">
         <div v-if="errorMessage" class="error-toast" @click="errorMessage = ''">
-          {{ errorMessage }}
+          {{ errorText(errorMessage) }}
         </div>
       </transition>
 
       <div v-if="!connected" class="status-banner warn">
-        Utracono połączenie z serwerem. Próbuję połączyć ponownie…
+        {{ $t('board.selfOffline') }}
       </div>
       <div v-else-if="opponentOffline" class="status-banner">
-        <span>
-          <strong>{{ opponent.name }}</strong> jest offline. Gra poczeka, aż przeciwnik wróci pod tym samym imieniem.
-          Możesz też zakończyć partię.
-        </span>
-        <button class="btn btn-gold banner-btn" @click="leaveGame">Zakończ partię</button>
+        <span><strong>{{ opponent.name }}</strong> {{ $t('board.opponentOffline') }}</span>
+        <button class="btn btn-gold banner-btn" @click="leaveGame">{{ $t('board.endGame') }}</button>
       </div>
 
       <!-- Opponent Section - Fixed at top -->
@@ -52,6 +50,7 @@
           :player="player"
           @new-game="newGame"
           @help="showHelp = true"
+          @settings="showSettings = true"
           @leave="leaveGame"
         />
       </div>
@@ -72,6 +71,7 @@
     </div>
 
     <HelpDialog v-if="showHelp" @close="showHelp = false" />
+    <SettingsDialog v-if="showSettings" @close="showSettings = false" />
   </div>
 </template>
 
@@ -79,6 +79,8 @@
 import socket from '../socket';
 import StartMenu from './StartMenu.vue';
 import HelpDialog from './HelpDialog.vue';
+import SettingsDialog from './SettingsDialog.vue';
+import { errorText } from '../i18n';
 import OpponentSection from './OpponentSection.vue';
 import NeutralZone from './NeutralZone.vue';
 import PlayerSection from './PlayerSection.vue';
@@ -87,6 +89,7 @@ export default {
   components: {
     StartMenu,
     HelpDialog,
+    SettingsDialog,
     OpponentSection,
     NeutralZone,
     PlayerSection
@@ -99,6 +102,7 @@ export default {
       lobby: null,
       connected: socket.connected,
       showHelp: false,
+      showSettings: false,
       selectedDiceIndexes: [],
       joinError: '',
       notice: '',
@@ -187,6 +191,10 @@ export default {
     clearTimeout(this.errorTimer);
   },
   methods: {
+    // błędy i komunikaty z serwera przychodzą jako kody; tłumaczymy je przy wyświetlaniu
+    errorText(error) {
+      return errorText(error);
+    },
     join({ name, gods }) {
       this.joinError = '';
       this.notice = '';
@@ -357,9 +365,9 @@ export default {
 /* przeciwnik na ciemnym pasie, środek i gracz na pergaminie */
 .opponent-section {
   flex: 0 0 auto;
-  color: var(--parchment);
+  color: var(--on-bg);
   background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0.15));
-  border-bottom: 1px solid rgba(201, 162, 76, 0.35);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.35);
 }
 
 /* środek zajmuje to, co zostaje z wysokości ekranu */

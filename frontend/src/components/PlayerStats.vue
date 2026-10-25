@@ -2,16 +2,16 @@
   <div class="player-stats">
     <div class="player-name">{{ name }}</div>
     <div class="stats">
-      <div class="stat hp" :class="hpLevel" :title="`Życie: ${hp} z ${maxHp}. Kto spadnie do zera, przegrywa.`">
-        <span class="label">HP</span>
+      <div class="stat hp" :class="hpLevel" :title="$t('stats.hpTitle', { hp: hp, max: maxHp })">
+        <span class="label">{{ $t('stats.hp') }}</span>
         <strong>{{ hp }}</strong>
         <span class="hp-bar"><span class="hp-fill" :style="{ width: hpPercent + '%' }"></span></span>
       </div>
-      <div class="stat mana" title="Mana: waluta, za którą kupujesz łaski bogów. Mana z odłożonych kości dochodzi przed walką.">
+      <div class="stat mana" :title="$t('stats.manaTitle')">
         <span class="mana-dot"></span>
-        <span class="label">Mana</span>
+        <span class="label">{{ $t('stats.mana') }}</span>
         <strong>{{ mana }}</strong>
-        <span v-if="pendingMana" class="pending">+{{ pendingMana }} z kości</span>
+        <span v-if="pendingMana" class="pending">{{ $t('stats.fromDice', { n: pendingMana }) }}</span>
       </div>
     </div>
     
@@ -71,7 +71,7 @@ computed: {
   gap: 0.35rem;
   padding: 0.2rem 0.6rem;
   color: var(--ink);
-  background: #fbf5e6;
+  background: var(--card);
   border: 1px solid var(--edge);
   border-radius: 6px;
   white-space: nowrap;

@@ -38,9 +38,16 @@ W środku planszy jest dziennik z przebiegiem każdej rundy: jakie kości mają 
 
 Po odświeżeniu strony wystarczy wpisać tę samą nazwę, żeby wrócić do gry. Jeśli przeciwnik się rozłączy, na górze planszy pojawia się informacja i można poczekać na jego powrót albo zakończyć partię. Przycisk „Opuść grę” kończy partię dla obu graczy i wraca do menu. Serwer obsługuje jedną grę naraz.
 
+## Ustawienia
+
+W menu i na planszy (ikona zębatki) są ustawienia: język (polski albo angielski), cztery motywy kolorów, trzy zestawy czcionek i większy tekst. Zapisują się w przeglądarce. Każdy gracz może grać w swoim języku, bo serwer wysyła dziennik i błędy jako kody, a zdania tworzy frontend.
+
+- teksty: `frontend/src/locales/pl.js` i `en.js` (te same klucze); nowy język to kolejny plik plus wpis w `LANGUAGES` w `settings.js` i w `messages` w `i18n.js`
+- motywy i czcionki: `frontend/src/assets/theme.css` (zmienne kolorów dla każdego `data-theme`, czcionki dla `data-font`)
+
 ## Dodawanie bogów
 
-Nowy bóg to klasa w `backend/god.py` (metoda `activate`, która coś robi i zwraca opis do dziennika) i wpis w `god_factory()`. Ikona idzie do `frontend/public/img/icons/<nazwa małymi literami>.png`. Menu startowe pobiera listę bogów z serwera, więc nowy bóg pojawi się tam sam. Liczbę bogów na gracza ustawia `GODS_PER_PLAYER` w `backend/game.py`.
+Bóg to jeden wpis w `god_factory()` w `backend/god.py`, np. `God("Odin", DAMAGE, [3, 5, 8], [3, 4, 5])`. Dostępne efekty: `DAMAGE` (obrażenia dla przeciwnika), `HEAL` (leczenie) i `BONUS` (dodatkowe kości w rundzie, np. `stat="helmet"`). Opis boga i wpisy w dzienniku powstają z efektu i wartości, więc nie trzeba pisać tekstów. Ikona idzie do `frontend/public/img/icons/<nazwa małymi literami>.png`, a polską formę „łaska Odyna” można dopisać w `GOD_GENITIVE` w `locales/pl.js`. Liczbę bogów na gracza ustawia `GODS_PER_PLAYER` w `backend/game.py`.
 
 ## Testy
 
@@ -49,4 +56,4 @@ cd backend
 python -m unittest discover -s tests -t .
 ```
 
-Czcionka nagłówków to Cinzel (SIL Open Font License, `frontend/src/assets/fonts/Cinzel-OFL.txt`).
+Czcionki Cinzel, Grenze Gotisch, Alegreya i Atkinson Hyperlegible Next są na licencji SIL Open Font License (pliki `*-OFL.txt` w `frontend/src/assets/fonts`).
