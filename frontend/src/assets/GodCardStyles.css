@@ -1,17 +1,17 @@
 .gods-container {
   display: flex;
-  gap: 20px;
+  gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: center;
-  height: 185px;
 }
 
 .god-card {
   position: relative;
-  width: 180px;
-  padding: 16px;
+  width: 110px;
+  padding: 6px 8px;
+  box-sizing: border-box;
   border: 2px solid #ccc;
-  border-radius: 12px;
+  border-radius: 10px;
   text-align: center;
   background-color: #f9f9f9;
   transition: transform 0.2s ease;
@@ -30,15 +30,15 @@
 }
 
 .god-icon {
-  width: 48px;
-  height: 48px;
-  margin-bottom: 8px;
+  width: 32px;
+  height: 32px;
+  margin-bottom: 2px;
 }
 
 .god-name {
-  font-size: 18px;
+  font-size: 14px;
   font-weight: bold;
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .levels {
@@ -64,8 +64,8 @@
 }
 
 .chosen-level {
-  margin-bottom: 10px;
-  font-size: 14px;
+  margin-top: 2px;
+  font-size: 12px;
 }
 
 .choose-btn {

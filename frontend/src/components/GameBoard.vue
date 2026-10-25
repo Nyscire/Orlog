@@ -195,23 +195,22 @@ export default {
 </script>
 
 <style scoped>
+/* Sekcje mają wysokość swojej zawartości. Jak ekran jest za niski, strona się przewija,
+   zamiast ucinać kości i przyciski. */
 .game-container {
-  height: 100vh;
-  overflow: hidden;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
 .game-interface {
-  height: 100vh;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  position: relative;
 }
 
 .error-toast {
-  position: absolute;
+  position: fixed;
   top: 1rem;
   left: 50%;
   transform: translateX(-50%);
@@ -239,65 +238,31 @@ export default {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   box-sizing: border-box;
 }
 
 .opponent-section {
-  height: 30vh;
-  min-height: 200px;
+  flex: 0 0 auto;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border-bottom: 2px solid #dee2e6;
 }
 
+/* środek zajmuje to, co zostaje z wysokości ekranu */
 .neutral-section {
-  height: 40vh;
-  min-height: 280px;
+  flex: 1 0 auto;
   background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
   border-bottom: 2px solid #dee2e6;
-  overflow: hidden;
 }
 
 .player-section {
-  height: 30vh;
-  min-height: 200px;
+  flex: 0 0 auto;
   background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
 }
 
-/* Responsive adjustments for smaller desktop screens */
-@media (max-height: 800px) {
+@media (max-width: 600px) {
   .section {
-    padding: 0.5rem 1rem;
-  }
-  
-  .opponent-section {
-    min-height: 180px;
-  }
-  
-  .neutral-section {
-    min-height: 240px;
-  }
-  
-  .player-section {
-    min-height: 180px;
-  }
-}
-
-@media (max-height: 700px) {
-  .section {
-    padding: 0.25rem 1rem;
-  }
-  
-  .opponent-section {
-    min-height: 160px;
-  }
-  
-  .neutral-section {
-    min-height: 200px;
-  }
-  
-  .player-section {
-    min-height: 160px;
+    padding: 0.5rem;
   }
 }
 </style>

@@ -52,6 +52,9 @@
           <div class="gods-status" v-if="player.chosen_god">
             Wybrany: {{ player.chosen_god.name }}
           </div>
+          <button v-if="canSelectGod" class="skip-god-button" @click="$emit('skip-god')">
+            Pomiń łaskę w tej rundzie
+          </button>
         </div>
         
         <div class="gods-container">
@@ -62,11 +65,6 @@
             :mana="player.mana_available ?? player.Mana ?? 0"
             @choose-god="$emit('choose-god', $event)"
           />
-        </div>
-        <div v-if="canSelectGod" class="dice-actions">
-          <button class="skip-god-button" @click="$emit('skip-god')">
-            Pomiń łaskę w tej rundzie
-          </button>
         </div>
       </div>
     </div>
@@ -119,37 +117,30 @@ export default {
 
 <style scoped>
 .player-container {
-  height: 100%;
   display: flex;
   flex-direction: column;
   background: linear-gradient(135deg, #e8f5e8 0%, #c8e6c9 100%);
   border-radius: 12px;
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
 }
 
 .player-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
   background: rgba(255, 255, 255, 0.9);
   border-bottom: 2px solid #a5d6a7;
-  backdrop-filter: blur(10px);
-}
-
-.player-status {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
+  border-radius: 12px 12px 0 0;
 }
 
 .rolls-counter {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.4rem 0.8rem;
+  padding: 0.3rem 0.8rem;
   background: linear-gradient(135deg, #4caf50, #388e3c);
   color: white;
   border-radius: 20px;
@@ -163,23 +154,21 @@ export default {
 }
 
 .player-content {
-  flex: 1;
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
   display: flex;
+  align-items: flex-start;
   gap: 1.5rem;
-  overflow: hidden;
 }
 
 .dice-section,
 .gods-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.4rem;
 }
 
 .dice-section {
-  flex: 0 0 300px;
-  max-width: 350px;
+  flex: 0 0 auto;
 }
 
 .gods-section {
@@ -189,22 +178,22 @@ export default {
 
 .section-title {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
 }
 
 .section-title h3 {
   margin: 0;
   color: #2e7d32;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
 }
 
 .dice-counter,
 .gods-status {
   background: rgba(76, 175, 80, 0.2);
-  padding: 0.25rem 0.6rem;
+  padding: 0.2rem 0.6rem;
   border-radius: 12px;
   font-size: 0.8rem;
   font-weight: 500;
@@ -214,14 +203,13 @@ export default {
 .dice-actions {
   display: flex;
   justify-content: center;
-  margin-top: 1rem;
 }
 
 .confirm-dice-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  padding: 0.5rem 1.25rem;
   font-weight: 600;
   cursor: pointer;
   background: linear-gradient(135deg, #4caf50, #388e3c);
@@ -249,24 +237,18 @@ export default {
 }
 
 .skip-god-button {
-  padding: 0.5rem 1.25rem;
+  padding: 0.3rem 0.9rem;
   font-weight: 600;
   cursor: pointer;
   background: #fff;
   color: #2e7d32;
   border: 2px solid #4caf50;
   border-radius: 25px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .skip-god-button:hover {
   background: #e8f5e9;
-}
-
-.gods-container {
-  flex: 1;
-  overflow-y: auto;
-  padding-right: 0.5rem;
 }
 
 /* Animations */
@@ -288,53 +270,12 @@ export default {
   transform: translateY(-10px) scale(0.95);
 }
 
-/* Responsive adjustments */
-@media (max-height: 800px) {
-  .player-header {
-    padding: 0.75rem;
-  }
-  
-  .player-content {
-    padding: 0.75rem;
-    gap: 1rem;
-  }
-  
-  .dice-section {
-    flex: 0 0 250px;
-  }
-}
-
-@media (max-height: 700px) {
-  .player-header {
-    padding: 0.5rem;
-  }
-  
-  .player-content {
-    padding: 0.5rem;
-    gap: 0.75rem;
-  }
-  
-  .section-title h3 {
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 1024px) {
+/* węższe ekrany: kości nad bogami */
+@media (max-width: 900px) {
   .player-content {
     flex-direction: column;
-  }
-  
-  .dice-section {
-    flex: none;
-    max-width: none;
-  }
-  
-  .gods-section {
-    flex: none;
-  }
-  
-  .gods-container {
-    max-height: 200px;
+    align-items: stretch;
+    gap: 0.75rem;
   }
 }
 </style>

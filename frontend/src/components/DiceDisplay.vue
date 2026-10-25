@@ -1,5 +1,5 @@
 <template>
-  <div class="dice-display">
+  <div class="dice-display" :class="{ compact }">
     <h4 v-if="title">{{ title }}</h4>
     <div class="dice-grid">
       <Die
@@ -25,6 +25,8 @@ export default {
     },
     title: String,
     selectable: Boolean,
+    // mniejsze kości, np. dla przeciwnika i strefy środkowej
+    compact: Boolean,
     selectedIndexes: Array
   },
   emits: ['toggle-selection'],
@@ -44,23 +46,31 @@ export default {
 
 <style scoped>
 .dice-display {
+  --die-size: 56px;
   width: 100%;
-  max-width: 350px;
-  margin: 0 auto;
 }
 
+.dice-display.compact {
+  --die-size: 44px;
+}
+
+/* wszystkie kości w jednym rzędzie, zawijają się dopiero na wąskim ekranie */
 .dice-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  justify-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   gap: 0.5rem;
-  min-height: 52px; /* Ensure minimum height for dice */
-  max-width: 180px; /* Limit width to accommodate 3 dice per row */
-  margin: 0 auto;
+  min-height: var(--die-size);
+}
+
+.compact .dice-grid {
+  gap: 0.35rem;
 }
 
 h3,h4 {
   text-align: center;
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
 }
 </style>

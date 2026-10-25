@@ -11,9 +11,10 @@
       
       <div class="dice-section">
         <DiceDisplay
-          :dice="opponent.rolled_dice"
+          :dice="opponent.rolled_dice || []"
           title="Kości przeciwnika"
           :selectable="false"
+          compact
         />
       </div>
       
@@ -49,57 +50,37 @@ export default {
 </script>
 
 <style scoped>
-.opponent-container {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
 .opponent-content {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  height: 100%;
-  max-height: 180px;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
 }
 
 .stats-section {
-  flex: 0 0 200px;
-  display: flex;
-  justify-content: center;
+  flex: 0 0 auto;
 }
 
 .dice-section {
-  flex: 1;
+  flex: 0 1 auto;
   display: flex;
   justify-content: center;
-  max-width: 300px;
 }
 
 .gods-section {
-  flex: 2;
+  flex: 1 1 auto;
   display: flex;
-  justify-content: center;
-  overflow: hidden;
+  justify-content: flex-end;
 }
 
-/* Compact layout adjustments */
-@media (max-height: 800px) {
+@media (max-width: 900px) {
   .opponent-content {
-    max-height: 160px;
+    justify-content: center;
   }
-}
 
-@media (max-height: 700px) {
-  .opponent-content {
-    max-height: 140px;
-    gap: 0.5rem;
-  }
-  
-  .stats-section {
-    flex: 0 0 180px;
+  .gods-section {
+    justify-content: center;
   }
 }
 </style>
