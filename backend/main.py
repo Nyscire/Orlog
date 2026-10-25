@@ -40,8 +40,9 @@ def broadcast_state() -> None:
     socketio.emit('lobby', game.lobby_data())
 
 
-def send_error(message: str) -> None:
-    emit('error_message', message)
+def send_error(error: GameError) -> None:
+    # klient dostaje kod i parametry, a tekst wyświetla w języku gracza
+    emit('error_message', error.to_dict())
     # Przywraca prawdziwy stan po optymistycznej zmianie w interfejsie
     emit('game_state', state_payload())
 
@@ -49,12 +50,12 @@ def send_error(message: str) -> None:
 def run_action(action: Callable[[str], None]) -> None:
     name: Optional[str] = sid_to_player.get(request.sid)
     if name is None or name not in game.players:
-        send_error("Najpierw dołącz do gry.")
+        send_error(GameError("join_first"))
         return
     try:
         action(name)
     except GameError as err:
-        send_error(str(err))
+        send_error(err)
         return
     broadcast_state()
 
@@ -77,19 +78,19 @@ def handle_submit_player_name(data):
     else:
         name, god_names = data, None
     if not isinstance(name, str) or not name.strip():
-        emit('join_rejected', 'Podaj nazwę gracza.')
+        emit('join_rejected', GameError("name_required").to_dict())
         return
     name = name.strip()
 
     bound_name = sid_to_player.get(request.sid)
     if bound_name is not None and bound_name != name:
-        emit('join_rejected', f'Grasz już jako {bound_name}.')
+        emit('join_rejected', GameError("already_playing_as", name=bound_name).to_dict())
         return
 
     # Powrót gracza po odświeżeniu strony lub zerwanym połączeniu
     if name in game.players:
         if is_connected(name) and bound_name != name:
-            emit('join_rejected', 'Ta nazwa jest już zajęta.')
+            emit('join_rejected', GameError("name_taken").to_dict())
             return
         sid_to_player[request.sid] = name
         log.info("Gracz wrócił do gry: %s", name)
@@ -104,7 +105,7 @@ def handle_submit_player_name(data):
     try:
         game.register_player(name, god_names)
     except GameError as err:
-        emit('join_rejected', str(err))
+        emit('join_rejected', err.to_dict())
         return
     sid_to_player[request.sid] = name
     log.info("Gracz dołączył: %s", name)
@@ -150,7 +151,7 @@ def handle_leave_game(*_):
     log.info("Gracz zakończył partię: %s", name)
     others = [sid for sid, player in sid_to_player.items() if player != name]
     for sid in others:
-        socketio.emit('game_ended', f'{name} kończy partię. Możesz zacząć nową grę.', to=sid)
+        socketio.emit('game_ended', {"code": "player_left", "params": {"name": name}}, to=sid)
     reset_server()
     broadcast_state()
 

@@ -230,26 +230,32 @@ class TestManaTiming(GameTestCase):
 
 
 class TestLog(GameTestCase):
-    def texts(self):
-        return [e["text"] for e in self.game.log]
+    maxDiff = None
+
+    def events(self):
+        return [(e["type"], e["params"]) for e in self.game.log]
 
     def test_round_is_logged(self):
         self.a.mana = 3
         self.dice_phase(a_faces=('arrow', 'arrow', 'mana+') + ('helmet',) * 3, b_faces=('shield',) + ('helmet',) * 5)
         self.gods_phase(a_choice=("Thor", 1))
-        self.assertEqual(self.texts(), [
-            "Zaczyna A.",
-            "A: 2 strzały, 3 hełmy. Mana z kości: 2.",
-            "B: 5 hełmów, 1 tarcza.",
-            "Mana z kości trafia do puli: A +2 (razem 5).",
-            "A wybiera łaskę Thora, poziom 1 (koszt 3 many).",
-            "B nie korzysta z łaski w tej rundzie.",
-            "A używa łaski Thora: B traci 3 HP i ma teraz 18.",
-            "A atakuje: 2 strzały na 1 tarczę. Zadaje 1 obrażenie, B ma teraz 17 HP.",
-            "B nie atakuje: nie ma strzał ani toporów.",
-            "Zaczyna B.",
+        self.assertEqual(self.events(), [
+            ("round_start", {"leader": "A"}),
+            ("dice_summary", {"player": "A", "counts": {"axe": 0, "arrow": 2, "helmet": 3, "shield": 0}, "mana": 2}),
+            ("dice_summary", {"player": "B", "counts": {"axe": 0, "arrow": 0, "helmet": 5, "shield": 1}, "mana": 0}),
+            ("mana_collected", {"gains": [{"player": "A", "gained": 2, "total": 5}]}),
+            ("god_chosen", {"player": "A", "god": "Thor", "level": 1, "cost": 3}),
+            ("god_skipped", {"player": "B"}),
+            ("god_effect", {"player": "A", "god": "Thor", "level": 1, "effect": "damage", "target": "B",
+                            "value": 3, "stat": None, "hp": 18}),
+            ("attack", {"attacker": "A", "defender": "B", "arrow": 2, "shield": 1, "axe": 0, "helmet": 5,
+                        "dmg": 1, "hp": 17}),
+            ("attack", {"attacker": "B", "defender": "A", "arrow": 0, "shield": 0, "axe": 0, "helmet": 3,
+                        "dmg": 0, "hp": 21}),
+            ("round_start", {"leader": "B"}),
         ])
         self.assertEqual({e["round"] for e in self.game.log}, {1, 2})
+        self.assertEqual([e["kind"] for e in self.game.log][:6], ["round", "dice", "dice", "mana", "god", "god"])
 
     def test_dice_are_summarised_once_per_round(self):
         for _ in range(3):
@@ -258,15 +264,17 @@ class TestLog(GameTestCase):
         kinds = [e["kind"] for e in self.game.log]
         self.assertEqual(kinds.count("dice"), 2)
 
-    def test_blocked_attack_and_self_gods(self):
+    def test_self_gods(self):
         self.a.mana = 5
         self.b.mana = 2
         self.dice_phase(a_faces=('axe',) + ('shield',) * 5, b_faces=('helmet', 'helmet') + ('shield',) * 4)
         self.gods_phase(a_choice=("Heimdall", 1), b_choice=("Freya", 1))
-        log = self.texts()
-        self.assertIn("A używa łaski Heimdalla: +1 do toporów w tej rundzie.", log)
-        self.assertIn("B używa łaski Freyi: odzyskuje 2 HP i ma teraz 23.", log)
-        self.assertIn("A atakuje: 2 topory na 2 hełmy. Obrona blokuje wszystko, B ma nadal 23 HP.", log)
+        effects = {p["god"]: p for t, p in self.events() if t == "god_effect"}
+        self.assertEqual((effects["Heimdall"]["effect"], effects["Heimdall"]["stat"], effects["Heimdall"]["value"]),
+                         ("bonus", "axe", 1))
+        self.assertEqual((effects["Freya"]["target"], effects["Freya"]["hp"]), ("B", 23))
+        attack = next(p for t, p in self.events() if t == "attack" and p["attacker"] == "A")
+        self.assertEqual((attack["axe"], attack["helmet"], attack["dmg"]), (2, 2, 0))
 
     def test_god_without_mana_is_logged(self):
         self.a.mana = 3
@@ -274,21 +282,36 @@ class TestLog(GameTestCase):
         self.game.choose_god("A", "Thor", 1)
         self.a.mana = 1  # np. mana zmieniła się przed walką
         self.game.choose_god("B", None, None)
-        self.assertIn("A nie może użyć łaski Thora: za mało many (1 z 3).", self.texts())
+        self.assertIn(("god_failed", {"player": "A", "god": "Thor", "mana": 1, "cost": 3}), self.events())
 
     def test_win_and_rematch_clear_log(self):
         self.b.hp = 1
         self.dice_phase(a_faces=('arrow',) + ('helmet',) * 5, b_faces=('helmet',) * 6)
         self.gods_phase()
-        self.assertEqual(self.texts()[-1], "Koniec gry. Wygrywa A.")
+        self.assertEqual(self.events()[-1], ("win", {"winner": "A"}))
         self.assertEqual(self.game.return_data()["log"][-1]["kind"], "win")
         self.game.rematch()
-        self.assertEqual(self.texts(), ["Zaczyna B."])
+        self.assertEqual(self.events(), [("round_start", {"leader": "B"})])
 
     def test_log_is_capped(self):
         for _ in range(Game.MAX_LOG + 20):
-            self.game._log("x")
+            self.game._log("x", "info")
         self.assertEqual(len(self.game.log), Game.MAX_LOG)
+
+
+class TestErrorCodes(GameTestCase):
+    def test_errors_carry_codes_and_params(self):
+        with self.assertRaises(GameError) as ctx:
+            self.game.confirm_dice("B", [])
+        self.assertEqual(ctx.exception.to_dict(), {"code": "not_your_turn", "params": {}})
+        self.dice_phase()
+        with self.assertRaises(GameError) as ctx:
+            self.game.choose_god("A", "Thor", 2)
+        self.assertEqual(ctx.exception.to_dict(),
+                         {"code": "not_enough_mana", "params": {"god": "Thor", "level": 2, "cost": 4, "mana": 0}})
+        with self.assertRaises(GameError) as ctx:
+            Game().register_player("A", ["Zeus"])
+        self.assertEqual(ctx.exception.to_dict(), {"code": "unknown_god", "params": {"god": "Zeus"}})
 
 
 class TestGodSelection(unittest.TestCase):
@@ -344,18 +367,12 @@ class TestGodSelection(unittest.TestCase):
         self.assertFalse(game.remove_waiting_player("A"))
 
 
-class TestPolish(unittest.TestCase):
-    def test_damage_forms(self):
-        from pl import damage
-        self.assertEqual([damage(n) for n in (0, 1, 2, 5, 12, 22)],
-                         ["0 obrażeń", "1 obrażenie", "2 obrażenia", "5 obrażeń", "12 obrażeń", "22 obrażenia"])
-
-    def test_dice_forms(self):
-        from pl import DEFENCE_FORMS, DIE_FORMS, count
-        self.assertEqual(count(1, DIE_FORMS["axe"]), "1 topór")
-        self.assertEqual(count(5, DIE_FORMS["arrow"]), "5 strzał")
-        self.assertEqual(count(1, DEFENCE_FORMS["shield"]), "1 tarczę")
-        self.assertEqual(count(3, DEFENCE_FORMS["helmet"]), "3 hełmy")
+class TestGodData(unittest.TestCase):
+    def test_gods_are_described_by_data(self):
+        data = {g["name"]: g for g in Game().lobby_data()["gods"]}
+        self.assertEqual(data["Thor"], {"name": "Thor", "effect": "damage", "values": [3, 5, 8], "stat": None,
+                                        "mana_costs": [3, 4, 5], "level": None})
+        self.assertEqual((data["Heimdall"]["effect"], data["Heimdall"]["stat"]), ("bonus", "axe"))
 
 
 if __name__ == "__main__":
