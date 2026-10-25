@@ -1,10 +1,11 @@
 <template>
   <div class="god-card neutral-god-card">
     <h4 class="god-name">{{ god.name }}</h4>
-    <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
+    <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
+    <div class="god-level" v-if="god.level">Poziom {{ god.level }}</div>
 
     <!-- Tooltip – wyświetlany przy hover -->
-    <div class="tooltip-card">
+    <div class="tooltip-card" :class="`tooltip-${tooltipAlign}`">
       {{ god.level ? god.levels?.[god.level-1] : god.description }}
     </div>
   </div>
@@ -17,6 +18,11 @@ export default {
     god: {
       type: Object,
       required: true
+    },
+    // do której krawędzi karty przyklejony jest tooltip, żeby nie wychodził poza ekran
+    tooltipAlign: {
+      type: String,
+      default: 'center'
     }
   }
 }
@@ -28,23 +34,28 @@ export default {
   overflow: visible;
   border: 2px solid #ccc;
   border-radius: 0.5rem;
-  padding: 1rem;
-  padding-top: 0;
-  width: 150px;
+  padding: 0.4rem 0.5rem;
+  box-sizing: border-box;
+  width: 110px;
   background: #fff;
   box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.1);
   text-align: center;
 }
 
 .god-icon {
-  max-width: 50px;
-  max-height: 50px;
-  margin: 0.5rem 0;
+  width: 32px;
+  height: 32px;
+  margin-top: 0.25rem;
 }
 
 .god-name {
-  margin-top: 0.5rem;
-  font-size: 1.1rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.god-level {
+  font-size: 0.75rem;
+  color: #555;
 }
 
 .tooltip-card {
@@ -65,6 +76,18 @@ export default {
   transition: opacity 0.25s ease;
   z-index: 20;
   white-space: pre-wrap;
+  animation: none;
+}
+
+.tooltip-card.tooltip-left {
+  left: 0;
+  transform: none;
+}
+
+.tooltip-card.tooltip-right {
+  left: auto;
+  right: 0;
+  transform: none;
 }
 
 .god-card:hover .tooltip-card {

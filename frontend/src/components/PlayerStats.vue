@@ -27,37 +27,31 @@ export default {
 </script>
 
 <style scoped>
+/* nazwa i statystyki w jednym rzędzie, żeby nie zabierały wysokości */
 .player-stats {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  margin: 1rem 0;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 .player-name {
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1.1rem;
+  margin-right: 0.25rem;
 }
 .stats {
   display: flex;
-  gap: 1rem;
-  margin: 0.5rem 0;
+  gap: 0.5rem;
 }
 .stat {
-  padding: 0.5rem 1rem;
+  padding: 0.25rem 0.6rem;
   border: 1px solid #ccc;
   border-radius: 6px;
+  background: #fff;
+  white-space: nowrap;
 }
 .pending {
   color: #6f42c1;
   font-weight: 600;
-}
-.gods-icons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-.god-icon {
-  width: 32px;
-  height: 32px;
 }
 </style>

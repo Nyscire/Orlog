@@ -17,10 +17,11 @@
           <DiceDisplay
             :dice="player.saved_dice || []"
             :selectable="false"
+            compact
           />
         </div>
         <div class="chosen-god-area" v-if="player.chosen_god">
-          <GodsNeutralDisplay :god="player.chosen_god" />
+          <GodsNeutralDisplay :god="player.chosen_god" tooltip-align="left" />
         </div>
       </div>
 
@@ -34,10 +35,11 @@
           <DiceDisplay
             :dice="opponent.saved_dice || []"
             :selectable="false"
+            compact
           />
         </div>
         <div class="chosen-god-area" v-if="opponent.chosen_god">
-          <GodsNeutralDisplay :god="opponent.chosen_god" />
+          <GodsNeutralDisplay :god="opponent.chosen_god" tooltip-align="right" />
         </div>
       </div>
     </div>
@@ -125,11 +127,11 @@ export default {
 
 <style scoped>
 .neutral-zone {
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  padding: 1rem;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
   background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 50%, #ffe082 100%);
   border-radius: 12px;
   box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -139,14 +141,15 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .stage-badge {
-  padding: 0.5rem 1rem;
+  padding: 0.35rem 0.9rem;
   border-radius: 20px;
   font-weight: bold;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -194,44 +197,48 @@ export default {
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
+/* [bóg][kości]  VS  [kości][bóg] */
 .battle-arena {
   flex: 1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 2rem;
-  margin: 1rem 0;
+  justify-content: center;
+  gap: 1rem;
 }
 
 .player-battle-side,
 .opponent-battle-side {
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
+}
+
+.player-battle-side {
+  flex-direction: row-reverse;
 }
 
 .saved-dice-area {
   background: rgba(255, 255, 255, 0.8);
-  padding: 1rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   backdrop-filter: blur(10px);
-  width: 100%;
-  max-width: 300px;
+  box-sizing: border-box;
+  width: 320px;
+  max-width: 100%;
 }
 
 .saved-dice-area h4 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 0.35rem 0;
   text-align: center;
   color: #3e2723;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
 }
 
 .chosen-god-area {
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.5rem;
+  padding: 0.35rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
@@ -240,12 +247,12 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 80px;
+  flex: 0 0 56px;
 }
 
 .vs-circle {
-  width: 60px;
-  height: 60px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: linear-gradient(135deg, #ff5722, #d84315);
   color: white;
@@ -253,7 +260,7 @@ export default {
   align-items: center;
   justify-content: center;
   font-weight: bold;
-  font-size: 1.2rem;
+  font-size: 1rem;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   animation: vsRotate 4s linear infinite;
 }
@@ -265,7 +272,7 @@ export default {
 
 .instructions {
   background: rgba(255, 255, 255, 0.9);
-  padding: 0.75rem;
+  padding: 0.5rem 0.75rem;
   border-radius: 8px;
   text-align: center;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
@@ -297,42 +304,22 @@ export default {
   border-radius: 25px;
 }
 
-/* Responsive adjustments */
-@media (max-height: 700px) {
-  .neutral-zone {
-    padding: 0.5rem;
-  }
-  
+/* wąskie ekrany: strony jedna pod drugą */
+@media (max-width: 900px) {
   .battle-arena {
-    gap: 1rem;
-    margin: 0.5rem 0;
-  }
-  
-  .saved-dice-area {
-    padding: 0.75rem;
-  }
-  
-  .vs-circle {
-    width: 50px;
-    height: 50px;
-    font-size: 1rem;
-  }
-}
-
-@media (max-width: 768px) {
-  .battle-arena {
-    flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .vs-divider {
-    transform: rotate(90deg);
-  }
-  
-  .stage-indicator {
     flex-direction: column;
     gap: 0.5rem;
-    text-align: center;
+  }
+
+  .player-battle-side,
+  .opponent-battle-side {
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .vs-divider {
+    flex-basis: auto;
   }
 }
 </style>

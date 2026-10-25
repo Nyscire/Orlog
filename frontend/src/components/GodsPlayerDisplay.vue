@@ -6,8 +6,10 @@
       class="god-card"
       :class="{ selected: isSelected(god) }"
     >
-      <h3 class="god-name">{{ god.name }}</h3>
-      <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
+      <div class="god-header">
+        <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
+        <h3 class="god-name">{{ god.name }}</h3>
+      </div>
 
       <div class="level-buttons" v-if="!readonly">
         <button
@@ -32,8 +34,7 @@
 
       <!-- Opis wybranego poziomu -->
       <div class="level-description" v-if="god.level && !readonly">
-        <strong>Poziom {{ god.level }}:</strong>
-        <p>{{ god.levels[god.level - 1] }}</p>
+        {{ god.levels[god.level - 1] }}
       </div>
 
       <!-- Tooltip: OGÓLNY opis boga -->
@@ -84,26 +85,24 @@ export default {
 <style scoped>
 .gods-display {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: center;
-  height: 100%;
-  overflow-y: auto;
-  padding: 0.25rem;
+  padding: 0.25rem 0;
 }
 
 .god-card {
   border: 2px solid #ccc;
   border-radius: 8px;
-  padding: 0.75rem;
+  padding: 0.4rem 0.5rem;
   width: 160px;
-  max-height: 140px;
+  box-sizing: border-box;
   background: #fff;
   position: relative;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 0.3rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -118,26 +117,28 @@ export default {
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+.god-header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
 .god-name {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.9rem;
-  text-align: center;
+  margin: 0;
+  font-size: 0.95rem;
   color: #495057;
 }
 
 .god-icon {
-  width: 36px;
-  height: 36px;
-  margin-bottom: 0.5rem;
+  width: 30px;
+  height: 30px;
 }
 
 .level-buttons {
   display: flex;
   gap: 0.25rem;
   align-items: center;
-  flex-wrap: wrap;
   justify-content: center;
-  margin-top: 0.5rem;
 }
 
 .level-btn {
@@ -188,22 +189,34 @@ export default {
 }
 
 .level-description {
-  margin-top: 0.5rem;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   text-align: center;
-  max-height: 40px;
-  overflow: hidden;
-}
-
-.level-description p {
-  margin: 0.25rem 0 0 0;
   line-height: 1.2;
 }
 
-/* Tooltip */
+/* ogólny opis boga, widoczny po najechaniu na kartę */
 .tooltip-card {
   position: absolute;
   bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 180px;
+  margin-bottom: 6px;
+  padding: 8px;
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.15);
+  font-size: 13px;
+  white-space: pre-wrap;
+  z-index: 20;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  animation: none;
 }
 
+.god-card:hover .tooltip-card {
+  opacity: 1;
+}
 </style>

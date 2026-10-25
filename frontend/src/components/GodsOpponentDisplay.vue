@@ -5,7 +5,7 @@
       :key="god.name"
       class="god-card disabled"
     >
-      <img :src="`/img/icons/${god.name}.png`" alt="Ikona boga" class="god-icon" />
+      <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
       <h3 class="god-name">{{ god.name }}</h3>
 
       <div class="chosen-level" v-if="god.level">
@@ -41,8 +41,7 @@ export default {
 .tooltip-card {
   position: absolute;
   top: 100%;             /* tuż pod kartą */
-  left: 50%;
-  transform: translateX(-50%);
+  right: 0;              /* karty są przy prawej krawędzi, więc tooltip nie wychodzi poza ekran */
   width: 180px;          /* stała szerokość jak w innych tooltipach */
   background: #fff;
   border: 1px solid #ddd;
@@ -56,6 +55,7 @@ export default {
   transition: opacity .25s ease;
   z-index: 20;
   white-space: pre-wrap;
+  animation: none;
 }
 
 /* pokazuj tooltip tylko przy najechaniu na całą kartę */

@@ -124,8 +124,11 @@ export default {
 <style scoped>
 .die {
   position: relative;
-  width: 56px;
-  height: 56px;
+  /* rozmiar ustawia DiceDisplay (--die-size), domyślnie 56px */
+  width: var(--die-size, 56px);
+  height: var(--die-size, 56px);
+  flex: 0 0 auto;
+  box-sizing: border-box;
   border-radius: 12px;
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   border: 2px solid #dee2e6;
@@ -148,8 +151,8 @@ export default {
 }
 
 .die-icon {
-  width: 32px;
-  height: 32px;
+  width: calc(var(--die-size, 56px) * 0.57);
+  height: calc(var(--die-size, 56px) * 0.57);
   transition: transform 0.3s ease;
   z-index: 2;
 }
