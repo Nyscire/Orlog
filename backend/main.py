@@ -27,15 +27,23 @@ def is_connected(name: str) -> bool:
     return name in sid_to_player.values()
 
 
+def state_payload() -> dict:
+    """Stan gry plus informacja, którzy gracze są teraz połączeni."""
+    data = game.return_data()
+    for player in data["players"]:
+        player["connected"] = is_connected(player["name"])
+    return data
+
+
 def broadcast_state() -> None:
-    socketio.emit('game_state', game.return_data())
+    socketio.emit('game_state', state_payload())
     socketio.emit('lobby', game.lobby_data())
 
 
 def send_error(message: str) -> None:
     emit('error_message', message)
     # Przywraca prawdziwy stan po optymistycznej zmianie w interfejsie
-    emit('game_state', game.return_data())
+    emit('game_state', state_payload())
 
 
 def run_action(action: Callable[[str], None]) -> None:
@@ -85,7 +93,7 @@ def handle_submit_player_name(data):
             return
         sid_to_player[request.sid] = name
         log.info("Gracz wrócił do gry: %s", name)
-        emit('game_state', game.return_data())
+        broadcast_state()  # drugi gracz od razu widzi, że przeciwnik wrócił
         return
 
     # Porzucona gra (żaden z jej graczy nie jest połączony) ustępuje miejsca nowej
@@ -113,9 +121,12 @@ def handle_disconnect(*_):
     if name is None:
         return
     log.info("Gracz rozłączony: %s", name)
-    # W lobby zwalniamy miejsce, żeby nowa osoba nie czekała na kogoś, kto wyszedł
-    if not is_connected(name) and game.remove_waiting_player(name):
-        broadcast_state()
+    if is_connected(name) or name not in game.players:
+        return
+    # W lobby zwalniamy miejsce, żeby nowa osoba nie czekała na kogoś, kto wyszedł.
+    # W trakcie gry miejsce zostaje, a przeciwnik dostaje informację, że gracz jest offline.
+    game.remove_waiting_player(name)
+    broadcast_state()
 
 
 @socketio.on('leave_lobby')
@@ -125,6 +136,23 @@ def handle_leave_lobby(*_):
         sid_to_player.pop(request.sid, None)
         log.info("Gracz wyszedł z lobby: %s", name)
         broadcast_state()
+
+
+@socketio.on('leave_game')
+def handle_leave_game(*_):
+    """Gracz kończy partię: obaj wracają do menu, a serwer jest wolny na nową grę."""
+    name = sid_to_player.get(request.sid)
+    if name is None or name not in game.players:
+        return
+    if game.stage == "waiting":
+        handle_leave_lobby()
+        return
+    log.info("Gracz zakończył partię: %s", name)
+    others = [sid for sid, player in sid_to_player.items() if player != name]
+    for sid in others:
+        socketio.emit('game_ended', f'{name} kończy partię. Możesz zacząć nową grę.', to=sid)
+    reset_server()
+    broadcast_state()
 
 
 @socketio.on('confirm_dice')

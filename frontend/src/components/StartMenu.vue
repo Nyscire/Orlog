@@ -9,6 +9,7 @@
 
     <section class="panel">
       <template v-if="!joined">
+        <div v-if="notice" class="notice">{{ notice }}</div>
         <div v-if="gameInProgress" class="notice">
           Trwa partia: {{ lobby.players.join(' i ') }}. Jeśli to Ty, wpisz to samo imię, żeby wrócić do gry.
         </div>
@@ -96,7 +97,9 @@ export default {
       type: Array,
       default: () => []
     },
-    error: String
+    error: String,
+    // informacja po zakończeniu partii przez przeciwnika
+    notice: String
   },
   emits: ['join', 'leave', 'help'],
   data() {
