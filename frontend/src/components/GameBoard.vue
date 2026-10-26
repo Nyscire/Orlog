@@ -48,6 +48,8 @@
           :log="data.log || []"
           :opponent="opponent"
           :player="player"
+          :pick="canSelectGod ? pick : null"
+          @toggle-target="toggleTarget"
           @new-game="newGame"
           @help="showHelp = true"
           @settings="showSettings = true"
@@ -62,10 +64,13 @@
           :can-select-dice="canSelectDice"
           :can-select-god="canSelectGod"
           :selected-dice-indexes="selectedDiceIndexes"
+          :pick="canSelectGod ? pick : null"
           @toggle-die-selection="toggleDieSelection"
           @confirm-dice="confirmDice"
           @choose-god="chooseGod"
           @skip-god="skipGod"
+          @select-favor="selectFavor"
+          @favor-amount="setFavorAmount"
         />
       </div>
     </div>
@@ -104,6 +109,8 @@ export default {
       showHelp: false,
       showSettings: false,
       selectedDiceIndexes: [],
+      // łaska wybierana w fazie bogów: { god, name, level, needs, max, amount, own, opponent }
+      pick: null,
       joinError: '',
       notice: '',
       errorMessage: '',
@@ -135,6 +142,12 @@ export default {
     },
     canSelectGod() {
       return this.isMyTurn && this.stage === 'gods';
+    }
+  },
+  watch: {
+    // po swojej turze w fazie bogów zaczynamy wybór od nowa
+    canSelectGod(value) {
+      if (!value) this.pick = null
     }
   },
   mounted() {
@@ -214,6 +227,7 @@ export default {
       this.playerName = '';
       this.data = {};
       this.selectedDiceIndexes = [];
+      this.pick = null;
       this.notice = '';
     },
     showError(message) {
@@ -252,21 +266,61 @@ export default {
 
       this.selectedDiceIndexes = [];
     },
+    selectFavor({ god, level }) {
+      const same = this.pick && this.pick.name === god.name
+      const max = god.values?.[level - 1] || 0
+      const pick = {
+        god,
+        name: god.name,
+        level,
+        needs: god.needs || null,
+        max,
+        amount: same ? this.pick.amount : 1,
+        own: same ? [...this.pick.own] : [],
+        opponent: same ? [...this.pick.opponent] : []
+      }
+      // niższy poziom pozwala wskazać mniej kości
+      while (pick.own.length + pick.opponent.length > max) {
+        if (pick.opponent.length) pick.opponent.pop()
+        else pick.own.pop()
+      }
+      this.pick = pick
+    },
+    setFavorAmount(value) {
+      if (!this.pick) return
+      const max = Math.max((this.player.HP || 0) - 1, 1)
+      this.pick.amount = Math.max(1, Math.min(value, max))
+    },
+    toggleTarget({ side, index }) {
+      const pick = this.pick
+      if (!pick || !pick.level) return
+      if (pick.needs !== 'any_dice' && !(pick.needs === 'opponent_dice' && side === 'opponent')) return
+      const list = pick[side]
+      const pos = list.indexOf(index)
+      if (pos >= 0) {
+        list.splice(pos, 1)
+      } else if (pick.own.length + pick.opponent.length < pick.max) {
+        list.push(index)
+      } else if (pick.max === 1) {
+        // przy jednej kości kliknięcie innej po prostu zmienia wybór
+        pick.own = []
+        pick.opponent = []
+        pick[side].push(index)
+      }
+    },
     chooseGod({ godName, level }) {
       if (!this.canSelectGod) return;
 
       const god = this.player.gods.find(g => g.name === godName);
+      const payload = { player: this.playerName, godName, level };
+      const pick = this.pick && this.pick.name === godName ? this.pick : null;
+      if (pick && pick.needs === 'amount') payload.amount = pick.amount;
+      if (pick && pick.needs === 'opponent_dice') payload.targets = { opponent: [...pick.opponent] };
+      if (pick && pick.needs === 'any_dice') payload.targets = { own: [...pick.own], opponent: [...pick.opponent] };
       if (god) {
-        this.player.chosen_god = {
-          ...god,
-          level
-        };
+        this.player.chosen_god = { ...god, level };
       }
-      socket.emit('choose_god', {
-        player: this.playerName,
-        godName,
-        level
-      });
+      socket.emit('choose_god', payload);
     },
     skipGod() {
       if (!this.canSelectGod) return;
@@ -309,7 +363,7 @@ export default {
   gap: 0.5rem 1rem;
   padding: 0.5rem 1rem;
   font-size: 0.9rem;
-  color: var(--ink);
+  color: var(--on-accent);
   background: var(--gold-bright);
   border-bottom: 1px solid var(--gold-dark);
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
@@ -317,7 +371,7 @@ export default {
 }
 
 .status-banner.warn {
-  color: var(--parchment);
+  color: var(--on-strong);
   background: var(--blood);
   border-bottom-color: rgba(0, 0, 0, 0.3);
 }
@@ -325,7 +379,8 @@ export default {
 .banner-btn {
   padding: 0.3rem 0.9rem;
   font-size: 0.85rem;
-  background: var(--parchment);
+  color: var(--ink);
+  background: var(--card);
 }
 
 .error-toast {
@@ -336,7 +391,7 @@ export default {
   z-index: 100;
   padding: 0.6rem 1.2rem;
   background: var(--blood);
-  color: var(--parchment);
+  color: var(--on-strong);
   border: 1px solid rgba(0, 0, 0, 0.3);
   font-weight: 600;
   border-radius: 8px;

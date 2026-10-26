@@ -181,6 +181,22 @@
   --overlay: rgba(4, 10, 6, 0.72);
 }
 
+/* Wspólne dla jasnych motywów: półprzezroczyste nakładki, kolor ikon bogów itp. */
+:root,
+[data-theme="classic"],
+[data-theme="frost"],
+[data-theme="ember"],
+[data-theme="forest"] {
+  --on-strong: #fbf6ec;                    /* tekst na kolorowym tle (plakietki, czerwone paski) */
+  --glass: rgba(255, 255, 255, 0.4);       /* jaśniejsze pola na pergaminie */
+  --glass-2: rgba(255, 255, 255, 0.6);
+  --glass-3: rgba(255, 255, 255, 0.88);
+  --shade: rgba(43, 29, 18, 0.06);         /* lekko przyciemnione pola */
+  --track: rgba(43, 29, 18, 0.15);         /* tło paska HP */
+  --icon-filter: none;                     /* ikony bogów są ciemne */
+  color-scheme: light;
+}
+
 /* ---------- czcionki ---------- */
 
 :root,
@@ -258,7 +274,7 @@ body {
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--shade);
 }
 
 :focus-visible {

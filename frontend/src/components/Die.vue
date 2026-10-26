@@ -196,7 +196,7 @@ export default {
   left: 3px;
   width: 16px;
   height: 16px;
-  background: var(--ink);
+  background: #2b1d12;   /* kafelek kości jest jasny w każdym motywie */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -247,7 +247,7 @@ export default {
 .tooltip-content {
   width: 190px;
   background: var(--tooltip-bg);
-  color: var(--parchment);
+  color: var(--on-strong);
   padding: 7px 10px;
   border-radius: 6px;
   font-size: 12px;

@@ -47,24 +47,40 @@
         <p class="hint">{{ $t('menu.godsHint') }}</p>
 
         <div v-if="gods.length === 0" class="hint">{{ $t('menu.loadingGods') }}</div>
-        <div v-else class="gods-grid">
-          <button
-            v-for="god in gods"
-            :key="god.name"
-            type="button"
-            class="god-option"
-            :class="{ selected: isSelected(god), locked: isLocked(god) }"
-            :aria-pressed="isSelected(god)"
-            :disabled="isLocked(god)"
-            @click="toggle(god)"
-          >
-            <span v-if="isSelected(god)" class="check" aria-hidden="true">✓</span>
-            <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
-            <span class="god-name">{{ god.name }}</span>
-            <span class="god-effect">{{ $t('gods.describe', god) }}</span>
-            <span class="god-costs">{{ $t('menu.costs', { costs: god.mana_costs.join(' / ') }) }}</span>
-          </button>
-        </div>
+        <template v-else>
+          <div class="gods-grid" @mouseleave="hovered = null">
+            <button
+              v-for="god in gods"
+              :key="god.name"
+              type="button"
+              class="god-option"
+              :class="{ selected: isSelected(god), locked: isLocked(god), focused: detailGod && detailGod.name === god.name }"
+              :aria-pressed="isSelected(god)"
+              :aria-label="`${$t('gods.name', god)}: ${$t('gods.favor', god)}`"
+              @click="toggle(god)"
+              @mouseenter="hovered = god.name"
+              @focus="hovered = god.name"
+            >
+              <span v-if="isSelected(god)" class="check" aria-hidden="true">✓</span>
+              <img :src="icon(god)" alt="" class="god-icon" />
+              <span class="god-name">{{ $t('gods.name', god) }}</span>
+              <span class="god-favor">{{ $t('gods.favor', god) }}</span>
+            </button>
+          </div>
+
+          <!-- opis boga pod kursorem (albo ostatnio wybranego) -->
+          <div v-if="detailGod" class="god-detail" aria-live="polite">
+            <img :src="icon(detailGod)" alt="" class="detail-icon" />
+            <div class="detail-text">
+              <div class="detail-head">
+                <strong>{{ $t('gods.favor', detailGod) }}</strong>
+                <span class="detail-phase">{{ $t('gods.phase.' + detailGod.phase) }}</span>
+                <span class="detail-costs">{{ $t('menu.costs', { costs: detailGod.mana_costs.join(' / ') }) }}</span>
+              </div>
+              <div>{{ $t('gods.describe', detailGod) }}</div>
+            </div>
+          </div>
+        </template>
 
         <p v-if="error" class="error">{{ error }}</p>
         <button class="btn btn-gold join-btn" :disabled="!canJoin" @click="join">
@@ -75,7 +91,7 @@
       <div v-else class="waiting">
         <div class="waiting-runes" aria-hidden="true"><span>ᚠ</span><span>ᚢ</span><span>ᚦ</span></div>
         <h2>{{ $t('menu.waitingTitle') }}</h2>
-        <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: chosenGods.join(', ') }) }}</p>
+        <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: chosenGodNames }) }}</p>
         <p class="hint">{{ $t('menu.waitingHint') }}</p>
         <button class="btn btn-ghost" @click="$emit('leave')">{{ $t('menu.changeChoice') }}</button>
       </div>
@@ -94,6 +110,7 @@
 
 <script>
 import { LANGUAGES, setSetting, settings } from '../settings'
+import { godIcon } from '../dice'
 
 const STORAGE_KEY = 'orlog.player'
 
@@ -122,7 +139,9 @@ export default {
   data() {
     return {
       name: '',
-      selected: []
+      selected: [],
+      hovered: null,
+      lastPicked: null
     }
   },
   computed: {
@@ -137,6 +156,13 @@ export default {
     },
     maxGods() {
       return this.lobby?.max_gods || 3
+    },
+    detailGod() {
+      const name = this.hovered || this.lastPicked || this.selected[0]
+      return this.gods.find(g => g.name === name) || this.gods[0] || null
+    },
+    chosenGodNames() {
+      return this.chosenGods.map(name => this.$t('gods.name', { name })).join(', ')
     },
     gameInProgress() {
       return !!this.lobby && this.lobby.stage !== 'waiting'
@@ -186,12 +212,18 @@ export default {
     isSelected(god) {
       return this.selected.includes(god.name)
     },
+    icon(god) {
+      return godIcon(god.name)
+    },
     isLocked(god) {
       return !this.isSelected(god) && this.selected.length >= this.maxGods
     },
     toggle(god) {
+      // przy komplecie kliknięcie innego boga podmienia najdawniej wybranego
       if (this.isSelected(god)) this.selected = this.selected.filter(n => n !== god.name)
       else if (this.selected.length < this.maxGods) this.selected = [...this.selected, god.name]
+      else this.selected = [...this.selected.slice(1), god.name]
+      this.lastPicked = god.name
     },
     setLanguage(id) {
       setSetting('locale', id)
@@ -306,20 +338,20 @@ export default {
 }
 
 .panel {
-  width: min(760px, 100%);
+  width: min(920px, 100%);
   box-sizing: border-box;
   padding: 1.25rem 1.5rem;
   color: var(--ink);
   background: linear-gradient(180deg, var(--panel-top) 0%, var(--parchment) 60%, var(--parchment-2) 100%);
   border: 1px solid var(--edge);
   border-radius: 14px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 4px rgba(255, 255, 255, 0.35);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 0 0 4px var(--glass);
 }
 
 .notice {
   margin-bottom: 1rem;
   padding: 0.6rem 0.8rem;
-  background: rgba(47, 93, 124, 0.12);
+  background: var(--glass-2);
   border-left: 3px solid var(--rune);
   border-radius: 6px;
   font-size: 0.9rem;
@@ -384,8 +416,8 @@ export default {
 
 .gods-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 0.45rem;
 }
 
 .god-option {
@@ -393,19 +425,21 @@ export default {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.75rem 0.75rem 0.7rem;
+  gap: 0.1rem;
+  min-width: 0;
+  padding: 0.45rem 0.3rem 0.4rem;
   font: inherit;
   color: var(--ink);
   text-align: center;
   background: var(--card);
   border: 1.5px solid var(--parchment-3);
-  border-radius: 10px;
+  border-radius: 9px;
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.god-option:hover:not(:disabled) {
+.god-option:hover,
+.god-option.focused {
   transform: translateY(-2px);
   border-color: var(--edge);
 }
@@ -416,22 +450,26 @@ export default {
   box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.45), 0 6px 14px rgba(var(--accent-rgb), 0.2);
 }
 
+/* przy komplecie pozostali są przygaszeni, ale klik podmienia wybór */
 .god-option.locked {
-  opacity: 0.45;
-  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.god-option.locked:hover {
+  opacity: 0.85;
 }
 
 .check {
   position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 22px;
-  height: 22px;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 900;
   color: var(--on-accent);
   background: linear-gradient(180deg, var(--gold-bright), var(--gold));
@@ -439,23 +477,76 @@ export default {
 }
 
 .god-icon {
-  width: 46px;
-  height: 46px;
+  width: 30px;
+  height: 30px;
+  filter: var(--icon-filter);
 }
 
 .god-name {
   font-family: var(--font-title);
   font-weight: 700;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
+  line-height: 1.15;
 }
 
-.god-effect {
+.god-favor {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.68rem;
+  color: var(--ink-soft);
+}
+
+.god-detail {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.9rem;
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.75rem;
   font-size: 0.85rem;
   line-height: 1.3;
+  background: var(--glass);
+  border: 1px solid var(--parchment-3);
+  border-radius: 8px;
 }
 
-.god-costs {
+.detail-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.detail-icon {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  filter: var(--icon-filter);
+}
+
+.detail-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.2rem 0.6rem;
+}
+
+.detail-head strong {
+  font-family: var(--font-title);
+}
+
+.detail-phase {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.detail-costs {
+  margin-left: auto;
   font-size: 0.75rem;
+  font-weight: 700;
   color: var(--ink-soft);
 }
 
@@ -559,13 +650,91 @@ export default {
   box-shadow: 0 0 6px #e05a4f;
 }
 
+/* niskie ekrany (np. 1366×768): mniejszy nagłówek, żeby cała lista bogów się zmieściła */
+@media (max-height: 820px) {
+  .start-screen {
+    gap: 0.5rem;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .runes {
+    display: none;
+  }
+
+  .title {
+    font-size: clamp(2.5rem, 6vw, 3.25rem);
+  }
+
+  .divider {
+    margin-top: 0.35rem;
+  }
+
+  .panel {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+
+  .name-input {
+    margin-bottom: 0.7rem;
+    padding-top: 0.45rem;
+    padding-bottom: 0.45rem;
+  }
+
+  .join-btn {
+    margin-top: 0.75rem;
+    padding-top: 0.6rem;
+    padding-bottom: 0.6rem;
+  }
+
+  .gods-header + .hint {
+    display: none;
+  }
+
+  .gods-header {
+    margin-bottom: 0.4rem;
+  }
+
+  .gods-grid {
+    gap: 0.35rem;
+  }
+
+  .god-option {
+    padding-top: 0.35rem;
+    padding-bottom: 0.3rem;
+  }
+
+  .god-detail {
+    margin-top: 0.4rem;
+  }
+}
+
+/* bardzo niskie okno (np. 1280×720 z paskami przeglądarki): bez podpisów łask na kafelkach */
+@media (max-height: 680px) {
+  .title {
+    font-size: 2.4rem;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .god-favor {
+    display: none;
+  }
+}
+
 @media (max-width: 600px) {
   .panel {
     padding: 1.1rem;
   }
 
   .gods-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+  }
+
+  .god-favor {
+    display: none;
   }
 }
 </style>

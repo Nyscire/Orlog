@@ -5,27 +5,34 @@
       :key="god.name"
       class="god-card disabled"
     >
-      <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
-      <h3 class="god-name">{{ god.name }}</h3>
+      <img :src="icon(god)" alt="" class="god-icon" />
+      <h3 class="god-name">{{ $t('gods.name', god) }}</h3>
 
       <div class="chosen-level" v-if="god.level">
         <strong>{{ $t('gods.level', { level: god.level }) }}</strong>
       </div>
 
-      <!-- Tooltip – zawsze w DOM, ale widoczny tylko przy hover -->
-      <div
-        class="tooltip-card"
-      >
-        <div>{{ $t('gods.costs', god) }}</div>
+      <!-- opis łaski, widoczny przy najechaniu -->
+      <div class="tooltip-card">
+        <div class="tooltip-title">{{ $t('gods.favor', god) }}</div>
+        <div class="tooltip-phase">{{ $t('gods.phase.' + god.phase) }}</div>
         <div>{{ $t('gods.describe', god) }}</div>
+        <div class="tooltip-costs">{{ $t('gods.costs', god) }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import { godIcon } from '../dice'
+
 export default {
-  props: { gods: Array }
+  props: { gods: Array },
+  methods: {
+    icon(god) {
+      return godIcon(god.name)
+    }
+  }
 };
 </script>
 
@@ -56,12 +63,35 @@ export default {
   pointer-events: none;
   transition: opacity .25s ease;
   z-index: 20;
-  white-space: pre-wrap;
   animation: none;
 }
 
 /* pokazuj tooltip tylko przy najechaniu na całą kartę */
 .god-card:hover .tooltip-card {
   opacity: 1;
+}
+
+.god-icon {
+  filter: var(--icon-filter);
+}
+
+.tooltip-title {
+  font-family: var(--font-title);
+  font-weight: 700;
+}
+
+.tooltip-phase {
+  margin-bottom: 0.2rem;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.tooltip-costs {
+  margin-top: 0.25rem;
+  font-size: 12px;
+  color: var(--ink-soft);
 }
 </style>

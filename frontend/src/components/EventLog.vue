@@ -73,7 +73,7 @@ export default {
 .event-log {
   display: flex;
   flex-direction: column;
-  background: rgba(255, 255, 255, 0.45);
+  background: var(--glass);
   border: 1px solid var(--parchment-3);
   border-radius: 8px;
   padding: 0.4rem 0.75rem;
