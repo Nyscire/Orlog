@@ -1,0 +1,10 @@
+# Serwer gry w Dockerze. Z katalogu głównego repo:
+#   docker compose -f deploy/docker-compose.yml up -d --build
+# Aktualizacja po git pull: to samo polecenie jeszcze raz.
+services:
+  orlog:
+    build: ../backend
+    image: orlog-server
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
