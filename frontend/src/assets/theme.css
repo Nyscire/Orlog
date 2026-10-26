@@ -181,6 +181,112 @@
   --overlay: rgba(4, 10, 6, 0.72);
 }
 
+/* Wspólne dla jasnych motywów: półprzezroczyste nakładki, kolor ikon bogów itp. */
+:root,
+[data-theme="classic"],
+[data-theme="frost"],
+[data-theme="ember"],
+[data-theme="forest"] {
+  --on-strong: #fbf6ec;                    /* tekst na kolorowym tle (plakietki, czerwone paski) */
+  --glass: rgba(255, 255, 255, 0.4);       /* jaśniejsze pola na pergaminie */
+  --glass-2: rgba(255, 255, 255, 0.6);
+  --glass-3: rgba(255, 255, 255, 0.88);
+  --shade: rgba(43, 29, 18, 0.06);         /* lekko przyciemnione pola */
+  --track: rgba(43, 29, 18, 0.15);         /* tło paska HP */
+  --icon-filter: none;                     /* ikony bogów są ciemne */
+  color-scheme: light;
+}
+
+/* Noc polarna: ciemny granat, zorza */
+[data-theme="night"] {
+  --wood-900: #05080d;
+  --wood-800: #0a1018;
+  --wood-700: #111a25;
+  --wood-600: #1a2636;
+  --parchment: #172130;
+  --parchment-2: #121a26;
+  --parchment-3: #2a3a4f;
+  --edge: #3b4f68;
+  --ink: #e3ebf3;
+  --ink-soft: #9db0c4;
+  --gold: #4fc7a3;
+  --gold-bright: #86e3c6;
+  --gold-dark: #2b8a6f;
+  --accent-rgb: 79, 199, 163;
+  --on-accent: #04130e;
+  --blood: #cd4d47;
+  --mana: #8d9cff;
+  --moss: #3f8a4c;
+  --rune: #3c78ab;
+  --violet: #7d5cc4;
+  --card: #1c2838;
+  --card-hi: #1d3a3c;
+  --panel-top: #1b2636;
+  --input-bg: #0d141e;
+  --die-1: #eef2f6;
+  --die-2: #d3dce5;
+  --die-3: #b8c4d0;
+  --die-edge: #71839a;
+  --coin-light: #e9fff7;
+  --on-bg: #e3ebf3;
+  --on-bg-soft: #9db0c4;
+  --tooltip-bg: rgba(4, 8, 13, 0.97);
+  --overlay: rgba(0, 3, 8, 0.78);
+  --on-strong: #f6fbff;
+  --glass: rgba(255, 255, 255, 0.04);
+  --glass-2: rgba(255, 255, 255, 0.08);
+  --glass-3: rgba(255, 255, 255, 0.16);
+  --shade: rgba(0, 0, 0, 0.22);
+  --track: rgba(255, 255, 255, 0.12);
+  --icon-filter: invert(0.9) sepia(0.15) hue-rotate(160deg);
+  color-scheme: dark;
+}
+
+/* Otchłań Hel: węgiel i stare złoto */
+[data-theme="abyss"] {
+  --wood-900: #060506;
+  --wood-800: #0d0b0d;
+  --wood-700: #161317;
+  --wood-600: #221d23;
+  --parchment: #1d191e;
+  --parchment-2: #161317;
+  --parchment-3: #3a3138;
+  --edge: #57483f;
+  --ink: #ece4d6;
+  --ink-soft: #ae9f8c;
+  --gold: #d1a246;
+  --gold-bright: #ecc777;
+  --gold-dark: #8f6a23;
+  --accent-rgb: 209, 162, 70;
+  --on-accent: #140f05;
+  --blood: #cd4d47;
+  --mana: #9a9cff;
+  --moss: #4a8a3c;
+  --rune: #3c78ab;
+  --violet: #8159b8;
+  --card: #262027;
+  --card-hi: #3a2f1f;
+  --panel-top: #241f25;
+  --input-bg: #120f12;
+  --die-1: #f3ead9;
+  --die-2: #e0d1b5;
+  --die-3: #c9b48f;
+  --die-edge: #8a7350;
+  --coin-light: #fff1bf;
+  --on-bg: #ece4d6;
+  --on-bg-soft: #ae9f8c;
+  --tooltip-bg: rgba(6, 5, 6, 0.97);
+  --overlay: rgba(0, 0, 0, 0.8);
+  --on-strong: #fff8ec;
+  --glass: rgba(255, 255, 255, 0.035);
+  --glass-2: rgba(255, 255, 255, 0.08);
+  --glass-3: rgba(255, 255, 255, 0.15);
+  --shade: rgba(0, 0, 0, 0.25);
+  --track: rgba(255, 255, 255, 0.12);
+  --icon-filter: invert(0.88) sepia(0.45) saturate(1.3);
+  color-scheme: dark;
+}
+
 /* ---------- czcionki ---------- */
 
 :root,
@@ -258,7 +364,7 @@ body {
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.06);
+  background: var(--shade);
 }
 
 :focus-visible {

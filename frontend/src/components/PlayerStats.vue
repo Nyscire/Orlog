@@ -86,7 +86,7 @@ computed: {
   width: 46px;
   height: 6px;
   border-radius: 3px;
-  background: rgba(43, 29, 18, 0.15);
+  background: var(--track);
   overflow: hidden;
 }
 .hp-fill {

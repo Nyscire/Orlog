@@ -33,17 +33,19 @@
 
     <div class="battle-arena">
       <div class="player-battle-side">
-        <div class="saved-dice-area">
+        <div class="saved-dice-area" :class="{ targetable: targetMode === 'any_dice' }">
           <h4>{{ $t('neutral.yourSaved') }}</h4>
           <DiceDisplay
             :dice="player.saved_dice || []"
-            :selectable="false"
+            :selectable="targetMode === 'any_dice'"
+            :selected-indexes="targetMode ? pick.own : []"
             compact
+            @toggle-selection="$emit('toggle-target', { side: 'own', index: $event })"
           />
           <div class="dice-summary">{{ $t('dice.summary', player.saved_dice || []) || $t('neutral.nothingSaved') }}</div>
         </div>
         <div class="chosen-god-area" v-if="player.chosen_god">
-          <GodsNeutralDisplay :god="player.chosen_god" tooltip-align="left" />
+          <GodsNeutralDisplay :god="player.chosen_god" :choice="player.chosen_choice" tooltip-align="left" />
         </div>
       </div>
 
@@ -52,17 +54,19 @@
       </div>
 
       <div class="opponent-battle-side">
-        <div class="saved-dice-area">
+        <div class="saved-dice-area" :class="{ targetable: !!targetMode }">
           <h4>{{ $t('neutral.opponentSaved') }}</h4>
           <DiceDisplay
             :dice="opponent.saved_dice || []"
-            :selectable="false"
+            :selectable="!!targetMode"
+            :selected-indexes="targetMode ? pick.opponent : []"
             compact
+            @toggle-selection="$emit('toggle-target', { side: 'opponent', index: $event })"
           />
           <div class="dice-summary">{{ $t('dice.summary', opponent.saved_dice || []) || $t('neutral.nothingSaved') }}</div>
         </div>
         <div class="chosen-god-area" v-if="opponent.chosen_god">
-          <GodsNeutralDisplay :god="opponent.chosen_god" tooltip-align="right" />
+          <GodsNeutralDisplay :god="opponent.chosen_god" :choice="opponent.chosen_choice" tooltip-align="right" />
         </div>
       </div>
     </div>
@@ -110,15 +114,25 @@ export default {
     opponent: {
       type: Object,
       default: () => ({})
+    },
+    // łaska wybierana w tej chwili; Frigg i Loki wskazują kości na stole
+    pick: {
+      type: Object,
+      default: null
     }
   },
-  emits: ['new-game', 'help', 'leave', 'settings'],
+  emits: ['new-game', 'help', 'leave', 'settings', 'toggle-target'],
   data() {
     return {
       confirmLeave: false
     }
   },
   computed: {
+    // 'opponent_dice' (Loki), 'any_dice' (Frigg) albo null
+    targetMode() {
+      const needs = this.pick?.level ? this.pick.needs : null
+      return needs === 'opponent_dice' || needs === 'any_dice' ? needs : null
+    },
     // podpowiedź, co teraz zrobić
     instruction() {
       const mine = this.activePlayer === this.player.name
@@ -130,6 +144,9 @@ export default {
       }
       if (this.stage === 'gods') {
         if (!mine) return this.$t('neutral.hint.opponentChoosing', { name: this.activePlayer })
+        if (this.targetMode) {
+          return this.$t('gods.pickTargetsHint', { god: this.pick.god, max: this.pick.max, any: this.targetMode === 'any_dice' })
+        }
         return this.$t('neutral.hint.pickGod', { mana: this.player.mana_available ?? this.player.Mana ?? 0 })
       }
       return ''
@@ -179,7 +196,7 @@ export default {
   font-weight: 700;
   font-size: 0.8rem;
   letter-spacing: 0.06em;
-  color: var(--parchment);
+  color: var(--on-strong);
   border: 1px solid rgba(0, 0, 0, 0.25);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
@@ -222,14 +239,14 @@ export default {
   font-size: 0.8rem;
   font-weight: 700;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--glass-2);
   border: 1px solid var(--edge);
   border-radius: 999px;
   cursor: pointer;
 }
 
 .help-btn:hover {
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--glass-3);
 }
 
 .icon-btn {
@@ -240,7 +257,7 @@ export default {
 }
 
 .help-btn.danger {
-  color: var(--parchment);
+  color: var(--on-strong);
   background: var(--blood);
   border-color: rgba(0, 0, 0, 0.3);
 }
@@ -295,13 +312,20 @@ export default {
 }
 
 .saved-dice-area {
-  background: rgba(255, 255, 255, 0.4);
+  background: var(--glass);
   padding: 0.4rem 0.75rem;
   border: 1px dashed var(--edge);
   border-radius: 12px;
   box-sizing: border-box;
   width: 360px;
   max-width: 100%;
+}
+
+/* Frigg i Loki: tu klika się kości */
+.saved-dice-area.targetable {
+  border: 1.5px solid var(--gold);
+  background: rgba(var(--accent-rgb), 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.2);
 }
 
 .saved-dice-area h4 {
@@ -347,7 +371,7 @@ export default {
 }
 
 .instructions {
-  background: rgba(43, 29, 18, 0.06);
+  background: var(--shade);
   padding: 0.35rem 0.75rem;
   border-radius: 8px;
   text-align: center;

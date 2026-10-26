@@ -54,7 +54,7 @@
         <div class="section-title">
           <h3>{{ canSelectGod ? $t('player.pickGod') : $t('player.yourGods') }}</h3>
           <div class="gods-status" v-if="player.chosen_god">
-            {{ $t('player.chosen', { god: player.chosen_god.name }) }}
+            {{ $t('player.chosen', { god: $t('gods.name', player.chosen_god) }) }}
           </div>
           <button v-if="canSelectGod" class="btn btn-ghost skip-god-button" @click="$emit('skip-god')">
             {{ $t('player.skipGod') }}
@@ -67,7 +67,11 @@
             :readonly="!canSelectGod"
             :chosen-god="player.chosen_god"
             :mana="player.mana_available ?? player.Mana ?? 0"
+            :hp="player.HP ?? 0"
+            :pick="pick"
             @choose-god="$emit('choose-god', $event)"
+            @select-favor="$emit('select-favor', $event)"
+            @amount="$emit('favor-amount', $event)"
           />
         </div>
       </div>
@@ -103,6 +107,11 @@ export default {
     selectedDiceIndexes: {
       type: Array,
       default: () => []
+    },
+    // łaska wybierana w tej chwili (poziom, HP do poświęcenia, wskazane kości)
+    pick: {
+      type: Object,
+      default: null
     }
   },
   computed: {
@@ -115,7 +124,7 @@ export default {
       return count > 0 ? this.$t('player.confirmSelected', { n: count }) : this.$t('player.rerollAll')
     }
   },
-  emits: ['toggle-die-selection', 'confirm-dice', 'choose-god', 'skip-god']
+  emits: ['toggle-die-selection', 'confirm-dice', 'choose-god', 'skip-god', 'select-favor', 'favor-amount']
 }
 </script>
 
@@ -143,7 +152,7 @@ export default {
   flex-wrap: wrap;
   gap: 0.5rem;
   padding: 0.4rem 0.75rem;
-  background: rgba(255, 255, 255, 0.35);
+  background: var(--glass);
   border-bottom: 1px solid var(--parchment-3);
   border-radius: 12px 12px 0 0;
 }
@@ -171,7 +180,7 @@ export default {
   gap: 0.45rem;
   padding: 0.25rem 0.7rem;
   color: var(--ink-soft);
-  background: rgba(43, 29, 18, 0.06);
+  background: var(--shade);
   border: 1px solid var(--parchment-3);
   border-radius: 999px;
   font-weight: 700;
@@ -198,7 +207,7 @@ export default {
 }
 
 .player-content {
-  padding: 0.4rem 0.75rem;
+  padding: 0.3rem 0.75rem 0.4rem;
   display: flex;
   align-items: flex-start;
   gap: 1.5rem;

@@ -2,27 +2,15 @@ import random
 from typing import Dict, List, Optional
 
 from die import Die
-from god import LEVELS, God, god_factory
-from player import Player
+from errors import GameError
+from god import AFTER, BEFORE, FIRST, LEVELS, FavorContext, God, god_factory
+from player import FACES, Player
 
-
-class GameError(Exception):
-    """Ruch niezgodny z zasadami albo stanem gry.
-
-    Niesie kod i parametry, a tekst w języku gracza tworzy frontend (errors.<kod>).
-    """
-
-    def __init__(self, code: str, **params) -> None:
-        super().__init__(code)
-        self.code = code
-        self.params = params
-
-    def to_dict(self) -> Dict[str, object]:
-        return {"code": self.code, "params": self.params}
+__all__ = ["Game", "GameError"]
 
 
 class Game:
-    DICES = ['axe', 'arrow', 'helmet', 'mana', 'shield']
+    DICES = ['axe', 'arrow', 'helmet', 'hand', 'shield']
     MAX_PLAYERS = 2
     MAX_NAME_LENGTH = 20
     MAX_LOG = 150
@@ -89,6 +77,11 @@ class Game:
                 raise GameError("unknown_god", god=name)
         return [god for god in catalog if god.name in names]
 
+    @staticmethod
+    def _fresh_gods(gods: List[God]) -> List[God]:
+        names = {god.name for god in gods}
+        return [god for god in god_factory() if god.name in names]
+
     def register_player(self, name: str, god_names: Optional[List[str]] = None) -> Player:
         name = (name or "").strip()
         if not name:
@@ -122,8 +115,7 @@ class Game:
             raise GameError("game_in_progress")
         loser = self.opponent_of(self.winner)
         # każdy zostaje przy bogach wybranych w menu
-        self.players = {name: Player(name, self.pick_gods([g.name for g in p.gods]))
-                        for name, p in self.players.items()}
+        self.players = {name: Player(name, self._fresh_gods(p.gods)) for name, p in self.players.items()}
         self.round = 1
         self.winner = None
         self.leader = loser.name
@@ -140,11 +132,11 @@ class Game:
         self._log("round_start", "round", leader=self.leader)
         self.roll_dice(self.players[self.leader])
 
+    def random_die(self) -> Die:
+        return Die(self.rng.choice(self.DICES), self.rng.choice([True, False]))
+
     def roll_dice(self, player: Player) -> None:
-        player.rolled_dice = [
-            Die(self.rng.choice(self.DICES), self.rng.choice([True, False]))
-            for _ in range(Player.DICE_COUNT - len(player.saved_dice))
-        ]
+        player.rolled_dice = [self.random_die() for _ in range(Player.DICE_COUNT - len(player.saved_dice))]
 
     def confirm_dice(self, player_name: str, selected: List[int]) -> None:
         player = self._require_turn(player_name, "dice")
@@ -175,21 +167,38 @@ class Game:
             for p in order:
                 stats = p.dice_stats
                 self._log("dice_summary", "dice", player=p.name,
-                          counts={face: stats[face] for face in ("axe", "arrow", "helmet", "shield")},
+                          counts={face: stats[face] for face in FACES},
                           mana=stats["mana"])
             self._collect_mana(order)
 
     def _collect_mana(self, order) -> None:
-        """Mana z kości trafia do puli od razu po rzutach, żeby było widać, ile można wydać na łaski."""
+        """Rozliczenie many zaraz po rzutach, żeby było widać, ile można wydać na łaski.
+
+        Najpierw każdy dostaje manę ze złotych obwódek, potem ręce kradną
+        po 1 manie przeciwnikowi (zaczyna gracz kierujący).
+        """
+        if all(player.mana_collected for player in order):
+            return
         gains = []
         for player in order:
-            gained = player.collect_dice_mana()
+            gained = player.collect_gold_mana()
             if gained:
                 gains.append({"player": player.name, "gained": gained, "total": player.mana})
         if gains:
             self._log("mana_collected", "mana", gains=gains)
+        for thief in order:
+            victim = self.opponent_of(thief)
+            hands = thief.dice_stats["hand"]
+            if not hands:
+                continue
+            stolen = min(hands, victim.mana)
+            victim.mana -= stolen
+            thief.mana += stolen
+            self._log("mana_stolen", "mana", thief=thief.name, victim=victim.name, hands=hands,
+                      amount=stolen, thief_total=thief.mana, victim_total=victim.mana)
 
-    def choose_god(self, player_name: str, god_name: Optional[str], level: Optional[int]) -> None:
+    def choose_god(self, player_name: str, god_name: Optional[str], level: Optional[int],
+                   choice: Optional[Dict] = None) -> None:
         player = self._require_turn(player_name, "gods")
         if god_name is None:
             player.choose_god(None, None)  # gracz pomija łaskę w tej rundzie
@@ -204,8 +213,12 @@ class Game:
             if cost > player.mana_available:
                 raise GameError("not_enough_mana", god=god.name, level=level, cost=cost,
                                 mana=player.mana_available)
-            player.choose_god(god, level)
-            self._log("god_chosen", "god", player=player.name, god=god.name, level=level, cost=cost)
+            if choice is not None and not isinstance(choice, dict):
+                raise GameError("invalid_targets")
+            checked = god.validate_choice(player, self.opponent_of(player), level, choice or {})
+            player.choose_god(god, level, checked)
+            self._log("god_chosen", "god", player=player.name, god=god.name, level=level, cost=cost,
+                      **checked)
 
         if player.name == self.leader:
             self.active_player = self.opponent_of(player).name
@@ -215,39 +228,91 @@ class Game:
     # ---------- walka ----------
 
     def battle(self) -> None:
+        """Rozliczenie rundy.
+
+        1. Kradzież Thryma (płaci od razu i obniża poziom łaski przeciwnika).
+        2. Zapłata za pozostałe łaski (pełny koszt wybranego poziomu).
+        3. Łaski "przed walką" (kości i ich siła), według kolejności `order`.
+        4. Ataki: topory na hełmy, strzały na tarcze.
+        5. Łaski "po walce" (obrażenia, leczenie, mana).
+        """
         leader = self.players[self.leader]
         other = self.opponent_of(leader)
         order = [leader, other]
 
         self._collect_mana(order)  # zwykle już zebrana po rzutach; tu tylko na wszelki wypadek
 
+        stats = {p.name: {"blocked": 0, "axe_damage": 0, "damage_taken": 0, "spent": 0} for p in order}
+        favors = {p.name: {"god": p.chosen_god, "level": p.chosen_level, "choice": p.chosen_choice,
+                           "paid": False}
+                  for p in order if p.chosen_god is not None and p.chosen_level}
+
         for player in order:
-            self._activate_god(player)
-            if self._check_winner():
-                return
+            favor = favors.get(player.name)
+            if favor and favor["god"].phase == FIRST:
+                if self._pay(player, favor, favors, stats):
+                    self._apply_favor(player, favor, favors, stats)
+                    favor["done"] = True
+
+        for player in order:
+            favor = favors.get(player.name)
+            if favor and not favor["paid"]:
+                self._pay(player, favor, favors, stats)
+
+        if self._run_phase(BEFORE, order, favors, stats):
+            return
 
         for attacker in order:
             defender = self.opponent_of(attacker)
-            self._log_attack(attacker, defender, attacker.attack(defender))
+            result = attacker.attack(defender)
+            stats[defender.name]["blocked"] += result["blocked"]
+            stats[defender.name]["damage_taken"] += result["dmg"]
+            stats[attacker.name]["axe_damage"] += result["axe_dmg"]
+            self._log_attack(attacker, defender, result)
             if self._check_winner():
                 return
+
+        if self._run_phase(AFTER, order, favors, stats):
+            return
 
         self.round += 1
         self.leader = other.name
         self._begin_round()
 
-    def _activate_god(self, player: Player) -> None:
-        god, level = player.chosen_god, player.chosen_level
-        if god is None or level is None:
-            return
-        cost = god.cost(level)
+    def _pay(self, player: Player, favor: Dict, favors: Dict, stats: Dict) -> bool:
+        """Płaci za łaskę; bez many albo po Kradzieży Thryma łaska przepada."""
+        god = favor["god"]
+        cost = god.cost(player.chosen_level)  # płaci się za poziom wybrany przy stole
         if player.mana < cost:
             self._log("god_failed", "battle", player=player.name, god=god.name, mana=player.mana, cost=cost)
-            return
+            del favors[player.name]
+            return False
         player.mana -= cost
-        target = self.opponent_of(player) if god.targets_opponent else player
-        result = god.activate(target, level)
-        self._log("god_effect", "battle", player=player.name, god=god.name, level=level, **result)
+        stats[player.name]["spent"] += cost
+        favor["paid"] = True
+        if favor["level"] <= 0:
+            self._log("god_cancelled", "battle", player=player.name, god=god.name, cost=cost)
+            del favors[player.name]
+            return False
+        return True
+
+    def _run_phase(self, phase: str, order: List[Player], favors: Dict, stats: Dict) -> bool:
+        """Łaski z danej fazy; zwraca True, gdy gra się skończyła."""
+        queue = [(favors[p.name]["god"].order, i, p) for i, p in enumerate(order)
+                 if p.name in favors and favors[p.name]["god"].phase == phase
+                 and not favors[p.name].get("done")]
+        for _, _, player in sorted(queue, key=lambda item: item[:2]):
+            self._apply_favor(player, favors[player.name], favors, stats)
+            if self._check_winner():
+                return True
+        return False
+
+    def _apply_favor(self, player: Player, favor: Dict, favors: Dict, stats: Dict) -> None:
+        god, level = favor["god"], favor["level"]
+        ctx = FavorContext(self, player, self.opponent_of(player), level, favor["choice"], favors, stats)
+        result = god.apply(ctx)
+        self._log("god_effect", "battle", player=player.name, god=god.name, effect=god.effect,
+                  level=level, **result)
 
     def _log_attack(self, attacker: Player, defender: Player, result: Dict[str, int]) -> None:
         self._log("attack", "battle", attacker=attacker.name, defender=defender.name,

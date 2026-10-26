@@ -1,17 +1,21 @@
 <template>
   <div class="god-card neutral-god-card">
-    <h4 class="god-name">{{ god.name }}</h4>
-    <img :src="`/img/icons/${god.name.toLowerCase()}.png`" alt="" class="god-icon" />
+    <h4 class="god-name">{{ $t('gods.name', god) }}</h4>
+    <img :src="icon" alt="" class="god-icon" />
     <div class="god-level" v-if="god.level">{{ $t('gods.level', { level: god.level }) }}</div>
 
-    <!-- Tooltip – wyświetlany przy hover -->
+    <!-- opis wybranej łaski, przy najechaniu -->
     <div class="tooltip-card" :class="`tooltip-${tooltipAlign}`">
-      {{ god.level ? $t('gods.levelEffect', { god: god, level: god.level }) : $t('gods.describe', god) }}
+      <div class="tooltip-title">{{ $t('gods.favor', god) }}</div>
+      <div>{{ god.level ? $t('gods.levelEffect', { god: god, level: god.level }) : $t('gods.describe', god) }}</div>
+      <div v-if="choice && choice.amount" class="tooltip-extra">{{ $t('gods.sacrificed', { n: choice.amount }) }}</div>
     </div>
   </div>
 </template>
 
 <script>
+import { godIcon } from '../dice'
+
 export default {
   name: "GodsNeutralDisplay",
   props: {
@@ -19,10 +23,20 @@ export default {
       type: Object,
       required: true
     },
+    // dodatkowy wybór gracza (np. ile HP poświęca Odyn)
+    choice: {
+      type: Object,
+      default: null
+    },
     // do której krawędzi karty przyklejony jest tooltip, żeby nie wychodził poza ekran
     tooltipAlign: {
       type: String,
       default: 'center'
+    }
+  },
+  computed: {
+    icon() {
+      return godIcon(this.god.name)
     }
   }
 }
@@ -47,6 +61,7 @@ export default {
   width: 32px;
   height: 32px;
   margin-top: 0.25rem;
+  filter: var(--icon-filter);
 }
 
 .god-name {
@@ -79,7 +94,6 @@ export default {
   pointer-events: none;
   transition: opacity 0.25s ease;
   z-index: 20;
-  white-space: pre-wrap;
   animation: none;
 }
 
@@ -96,5 +110,15 @@ export default {
 
 .god-card:hover .tooltip-card {
   opacity: 1;
+}
+
+.tooltip-title {
+  font-family: var(--font-title);
+  font-weight: 700;
+}
+
+.tooltip-extra {
+  margin-top: 0.2rem;
+  font-weight: 700;
 }
 </style>

@@ -104,7 +104,7 @@ export default {
 }
 
 .close:hover {
-  background: rgba(43, 29, 18, 0.08);
+  background: var(--shade);
 }
 
 h2 {

@@ -10,28 +10,172 @@ const FACES = {
   axe: ['topór', 'topory', 'toporów'],
   arrow: ['strzała', 'strzały', 'strzał'],
   helmet: ['hełm', 'hełmy', 'hełmów'],
-  shield: ['tarcza', 'tarcze', 'tarcz']
+  shield: ['tarcza', 'tarcze', 'tarcz'],
+  hand: ['ręka', 'ręce', 'rąk']
 }
 // biernik obrony: "3 strzały na 1 tarczę"
 const DEFENCE = {
   helmet: ['hełm', 'hełmy', 'hełmów'],
   shield: ['tarczę', 'tarcze', 'tarcz']
 }
-const BONUS_GENITIVE = { axe: 'toporów', arrow: 'strzał', helmet: 'hełmów', shield: 'tarcz' }
-const BONUS_PART = { axe: 'do ataku', arrow: 'do ataku', helmet: 'do obrony', shield: 'do obrony' }
-// "łaska Thora"
-const GOD_GENITIVE = { Thor: 'Thora', Freya: 'Freyi', Heimdall: 'Heimdalla', Loki: 'Lokiego', Odin: 'Odyna' }
+const DICE = ['kość', 'kości', 'kości']
+const MANA = n => `${n} many`
+const HP = n => `${n} HP`
+
+// polskie imiona bogów (pozostałe zostają jak w grze)
+const GOD_NAMES = { Odin: 'Odyn', Freyja: 'Freja', Brunhild: 'Brunhilda', Thrymr: 'Thrym', Idun: 'Idunn' }
 
 const count = (n, forms) => `${n} ${plural(n, forms)}`
 const damage = n => `${n} ${plural(n, ['obrażenie', 'obrażenia', 'obrażeń'])}`
-const gen = name => GOD_GENITIVE[name] || name
+const godName = name => GOD_NAMES[name] || name
+const num = n => String(n).replace('.', ',')
+const SLASH = '\u00a0/\u00a0'   // "2 / 5 / 8" bez łamania wiersza w środku
+const faceList = faces => faces.map(f => FACES[f]?.[0] || f).join(', ')
+
+// Łaski: nazwa, opis (wartości wszystkich poziomów), efekt jednego poziomu i wpis w dzienniku
+const FAVORS = {
+  thor_strike: {
+    name: 'Uderzenie Thora',
+    desc: v => `Po walce zadaje przeciwnikowi ${v} obrażeń.`,
+    level: x => damage(x),
+    log: p => `${p.target} traci ${HP(p.value)}, zostaje ${p.hp}.`
+  },
+  idun_rejuvenation: {
+    name: 'Odmłodzenie Idunn',
+    desc: v => `Po walce leczy cię o ${v} HP.`,
+    level: x => `+${HP(x)}`,
+    log: p => `+${HP(p.healed)}, ma teraz ${p.hp}.`
+  },
+  vidar_might: {
+    name: 'Potęga Vidara',
+    desc: v => `Przed walką zdejmuje przeciwnikowi ${v} hełmów.`,
+    level: x => `−${count(x, FACES.helmet)} przeciwnika`,
+    log: p => (p.removed ? `${p.target} traci ${count(p.removed, FACES.helmet)}.` : `${p.target} nie ma hełmów do zdjęcia.`)
+  },
+  ullr_aim: {
+    name: 'Celność Ullra',
+    desc: v => `Twoje strzały omijają ${v} tarcz przeciwnika.`,
+    level: x => `strzały omijają ${count(x, DEFENCE.shield)}`,
+    log: p => `strzały omijają ${count(p.value, DEFENCE.shield)} przeciwnika.`
+  },
+  heimdall_watch: {
+    name: 'Czujność Heimdalla',
+    desc: v => `Po walce +${v} HP za każdy zablokowany atak.`,
+    level: x => `+${HP(x)} za każdy blok`,
+    log: p => `zablokowane ataki: ${p.blocked}, +${HP(p.healed)}, ma teraz ${p.hp}.`
+  },
+  baldr_invulnerability: {
+    name: 'Niezniszczalność Baldra',
+    desc: v => `Każdy hełm i tarcza na kościach daje dodatkowo ${v}.`,
+    level: x => `+${x} za każdy hełm i tarczę`,
+    log: p => `obrona +${count(p.helmets, FACES.helmet)}, +${count(p.shields, FACES.shield)}.`
+  },
+  brunhild_fury: {
+    name: 'Furia Brunhildy',
+    desc: v => `Mnoży topory ×${v} (w górę).`,
+    level: x => `topory ×${num(x)}`,
+    log: p => `topory: ${p.before} → ${p.after}.`
+  },
+  freyr_gift: {
+    name: 'Dar Freyra',
+    desc: v => `+${v} do symbolu, którego masz najwięcej (topór, strzała, hełm, tarcza).`,
+    level: x => `+${x} do najczęstszego symbolu`,
+    log: p => (p.stat ? `+${count(p.value, FACES[p.stat])}.` : 'brak toporów, strzał, hełmów i tarcz, łaska nic nie daje.')
+  },
+  hel_grip: {
+    name: 'Uścisk Hel',
+    desc: v => `Po walce +${v} HP za każde obrażenie od twoich toporów.`,
+    level: x => `+${HP(x)} za obrażenie od topora`,
+    log: p => `obrażenia od toporów: ${p.damage}, +${HP(p.healed)}, ma teraz ${p.hp}.`
+  },
+  skadi_hunt: {
+    name: 'Łowy Skadi',
+    desc: v => `Każda strzała na kościach daje dodatkowo ${v}.`,
+    level: x => `+${x} do każdej strzały`,
+    log: p => `+${count(p.added, FACES.arrow)}.`
+  },
+  skuld_claim: {
+    name: 'Roszczenie Skuld',
+    desc: v => `Po walce przeciwnik traci ${v} many za każdą twoją strzałę.`,
+    level: x => `−${MANA(x)} przeciwnika za strzałę`,
+    log: p => `${p.target} traci ${MANA(p.destroyed)}, zostaje ${p.left}.`
+  },
+  frigg_sight: {
+    name: 'Wizja Frigg',
+    desc: v => `Przed walką przerzuca ${v} wskazane kości, twoje lub przeciwnika.`,
+    level: x => `przerzut do ${count(x, DICE)}`,
+    log: p => `przerzucone kości: własne ${p.own}, przeciwnika ${p.opponent}.`
+  },
+  loki_trick: {
+    name: 'Podstęp Lokiego',
+    desc: v => `Blokuje ${v} wskazane kości przeciwnika na tę rundę.`,
+    level: x => `blokuje ${count(x, DICE)} przeciwnika`,
+    log: p => (p.banned.length ? `${p.target} traci w tej rundzie: ${faceList(p.banned)}.` : 'nie ma czego zablokować.')
+  },
+  freyja_plenty: {
+    name: 'Obfitość Frei',
+    desc: v => `Przed walką dorzucasz ${v} dodatkowe kości.`,
+    level: x => `+${count(x, DICE)}`,
+    log: p => {
+      let text = `dodatkowe kości: ${faceList(p.faces)}.`
+      if (p.mana) text += ` Mana z obwódek: +${p.mana}.`
+      if (p.stolen) text += ` Ręce kradną ${MANA(p.stolen)}.`
+      return text
+    }
+  },
+  mimir_wisdom: {
+    name: 'Mądrość Mimira',
+    desc: v => `Po walce +${v} many za każde otrzymane obrażenie.`,
+    level: x => `+${MANA(x)} za obrażenie`,
+    log: p => `otrzymane obrażenia: ${p.damage}, +${MANA(p.gained)} (razem ${p.total}).`
+  },
+  bragi_verve: {
+    name: 'Zapał Bragiego',
+    desc: v => `+${v} many za każdą rękę na kościach.`,
+    level: x => `+${MANA(x)} za rękę`,
+    log: p => `ręce: ${p.hands}, +${MANA(p.gained)} (razem ${p.total}).`
+  },
+  odin_sacrifice: {
+    name: 'Ofiara Odyna',
+    desc: v => `Po walce poświęcasz wybrane HP, za każde +${v} many.`,
+    level: x => `${MANA(x)} za 1 HP`,
+    log: p => `poświęca ${HP(p.sacrificed)} i dostaje ${MANA(p.gained)} (HP: ${p.hp}, mana: ${p.total}).`
+  },
+  var_bond: {
+    name: 'Przysięga Var',
+    desc: v => `Po walce +${v} HP za każdą manę wydaną przez przeciwnika.`,
+    level: x => `+${HP(x)} za manę przeciwnika`,
+    log: p => `przeciwnik wydał ${MANA(p.spent)}, +${HP(p.healed)}, ma teraz ${p.hp}.`
+  },
+  thrymr_theft: {
+    name: 'Kradzież Thryma',
+    desc: v => `Obniża łaskę przeciwnika o ${v} poziomy. Wydana na nią mana przepada.`,
+    level: x => `łaska przeciwnika −${x} ${plural(x, ['poziom', 'poziomy', 'poziomów'])}`,
+    log: p => {
+      if (!p.target_god) return `${p.target} nie wybrał łaski, nie ma czego obniżyć.`
+      if (!p.new_level) return `${p.target}: ${favorByGod(p.target_god)} przepada.`
+      return `${p.target}: ${favorByGod(p.target_god)} spada z poziomu ${p.old_level} na ${p.new_level}.`
+    }
+  },
+  tyr_pledge: {
+    name: 'Zastaw Tyra',
+    desc: v => `Po walce poświęcasz wybrane HP, za każde przeciwnik traci ${v} many.`,
+    level: x => `−${MANA(x)} przeciwnika za 1 HP`,
+    log: p => `poświęca ${HP(p.sacrificed)}, ${p.target} traci ${MANA(p.destroyed)} (zostaje ${p.left}).`
+  }
+}
+const favor = effect => FAVORS[effect] || { name: effect, desc: () => '', level: () => '', log: () => '' }
+// nazwa łaski po imieniu boga, gdy nie znamy efektu (np. w starszych wpisach dziennika)
+const favorByGod = name => {
+  const key = Object.keys(FAVORS).find(k => k.startsWith(name.toLowerCase() + '_'))
+  return key ? FAVORS[key].name : godName(name)
+}
 
 function faceCounts(dice) {
-  const counts = { axe: 0, arrow: 0, helmet: 0, shield: 0 }
+  const counts = { axe: 0, arrow: 0, helmet: 0, shield: 0, hand: 0 }
   let mana = 0
   for (const die of dice || []) {
     if (die.stat in counts) counts[die.stat] += 1
-    if (die.stat === 'mana') mana += 1
     if (die.gives_mana) mana += 1
   }
   return { counts, mana }
@@ -127,7 +271,7 @@ export const pl = {
     hp: 'HP',
     hpTitle: 'Życie: {hp} z {max}. Kto spadnie do zera, przegrywa.',
     mana: 'Mana',
-    manaTitle: 'Mana: za nią kupujesz łaski bogów. Mana z odłożonych kości dochodzi po fazie rzutów.',
+    manaTitle: 'Mana: za nią kupujesz łaski bogów. Po fazie rzutów złote obwódki dają manę, a ręce kradną ją przeciwnikowi.',
     fromDice: '+{n} z kości'
   },
 
@@ -140,20 +284,17 @@ export const pl = {
     arrow: { name: 'Strzała', desc: 'Atak z dystansu: 1 obrażenie. Blokuje ją tarcza przeciwnika.' },
     helmet: { name: 'Hełm', desc: 'Obrona: blokuje 1 topór przeciwnika.' },
     shield: { name: 'Tarcza', desc: 'Obrona: blokuje 1 strzałę przeciwnika.' },
-    mana: { name: 'Mana', desc: 'Daje 1 manę. Manę wydajesz na łaski bogów.' },
-    manaBorder: 'Złota obwódka: kość daje dodatkowo 1 manę.',
+    hand: { name: 'Ręka', desc: 'Kradnie przeciwnikowi 1 manę, jeśli ją ma.' },
+    manaBorder: 'Złota obwódka: kość daje 1 manę.',
     manaBorderName: 'Złota obwódka',
-    manaBorderLegend: 'Kość daje dodatkowo 1 manę, niezależnie od symbolu.',
-    extraMana: 'daje dodatkowo 1 manę',
-    // "Atak: 2 topory, 1 strzała · Obrona: 1 hełm · Mana: +3"
+    manaBorderLegend: 'Kość daje 1 manę, niezależnie od symbolu.',
+    extraMana: 'daje 1 manę',
+    // "2 topory, 1 strzała · 1 hełm · 2 ręce · +3 many"
     summary: dice => {
       const { counts, mana } = faceCounts(dice)
-      const attack = ['axe', 'arrow'].filter(f => counts[f]).map(f => count(counts[f], FACES[f]))
-      const defence = ['helmet', 'shield'].filter(f => counts[f]).map(f => count(counts[f], FACES[f]))
-      const parts = []
-      if (attack.length) parts.push(`Atak: ${attack.join(', ')}`)
-      if (defence.length) parts.push(`Obrona: ${defence.join(', ')}`)
-      if (mana) parts.push(`Mana: +${mana}`)
+      const group = faces => faces.filter(f => counts[f]).map(f => count(counts[f], FACES[f])).join(', ')
+      const parts = [group(['axe', 'arrow']), group(['helmet', 'shield']), group(['hand'])].filter(Boolean)
+      if (mana) parts.push(`+${MANA(mana)}`)
       return parts.join(' · ')
     }
   },
@@ -162,22 +303,35 @@ export const pl = {
     choose: 'Wybierz',
     level: 'Poziom {level}',
     levelText: 'Poziom {level}: {text}',
-    costs: god => `Koszt many: ${god.mana_costs.join(' / ')}`,
-    describe: god => {
-      const v = (god.values || []).join(' / ')
-      if (god.effect === 'damage') return `Zadaje przeciwnikowi ${v} obrażeń.`
-      if (god.effect === 'heal') return `Przywraca ci ${v} HP.`
-      if (god.effect === 'bonus') return `Dodaje ${v} ${FACES[god.stat]?.[1] || god.stat} ${BONUS_PART[god.stat] || ''} w tej rundzie.`
-      return ''
-    },
+    name: god => godName(god.name),
+    favor: god => favor(god.effect).name,
+    costs: god => `Koszt many: ${god.mana_costs.join(SLASH)}`,
+    describe: god => favor(god.effect).desc((god.values || []).map(num).join(SLASH)),
     levelEffect: ({ god, level }) => {
       const value = god.values?.[level - 1]
       const cost = god.mana_costs?.[level - 1]
-      if (god.effect === 'damage') return `${damage(value)} (${cost} many)`
-      if (god.effect === 'heal') return `+${value} HP (${cost} many)`
-      if (god.effect === 'bonus') return `+${count(value, FACES[god.stat] || [god.stat, god.stat, god.stat])} (${cost} many)`
-      return `${cost} many`
-    }
+      return `${favor(god.effect).level(value)} (${MANA(cost)})`
+    },
+    phase: {
+      first: 'Na początku walki',
+      before: 'Przed walką',
+      after: 'Po walce'
+    },
+    // dodatkowy wybór przy łasce
+    sacrifice: 'Poświęć',
+    sacrificed: 'Poświęca {n} HP',
+    less: 'Mniej',
+    more: 'Więcej',
+    sacrificeResult: ({ god, level, amount }) => {
+      const value = god.values?.[level - 1] || 0
+      return god.effect === 'tyr_pledge'
+        ? `−${MANA(value * amount)} przeciwnika`
+        : `+${MANA(value * amount)}`
+    },
+    pickTargets: ({ picked, max }) => `Wskaż kości na stole: ${picked} z ${max}`,
+    pickTargetsHint: ({ god, max, any }) => any
+      ? `${favor(god.effect).name}: kliknij na stole do ${count(max, DICE)} (twoje albo przeciwnika), które chcesz przerzucić.`
+      : `${favor(god.effect).name}: kliknij na stole do ${count(max, DICE)} przeciwnika, które chcesz zablokować.`
   },
 
   log: {
@@ -187,22 +341,28 @@ export const pl = {
     events: {
       round_start: p => `Zaczyna ${p.leader}`,
       dice_summary: p => {
-        const parts = ['axe', 'arrow', 'helmet', 'shield'].filter(f => p.counts?.[f]).map(f => count(p.counts[f], FACES[f]))
+        const parts = ['axe', 'arrow', 'helmet', 'shield', 'hand'].filter(f => p.counts?.[f]).map(f => count(p.counts[f], FACES[f]))
         let text = `${p.player}: ${parts.length ? parts.join(', ') : 'bez broni i obrony'}.`
-        if (p.mana) text += ` Mana z kości: ${p.mana}.`
+        if (p.mana) text += ` Złote obwódki: ${p.mana}.`
         return text
       },
-      mana_collected: p => `Mana z kości trafia do puli: ${p.gains.map(g => `${g.player} +${g.gained} (razem ${g.total})`).join(', ')}.`,
-      god_chosen: p => `${p.player} wybiera łaskę ${gen(p.god)}, poziom ${p.level} (koszt ${p.cost} many).`,
-      god_skipped: p => `${p.player} nie korzysta z łaski w tej rundzie.`,
-      god_effect: p => {
-        const head = `${p.player} używa łaski ${gen(p.god)}:`
-        if (p.effect === 'damage') return `${head} ${p.target} traci ${p.value} HP i ma teraz ${p.hp}.`
-        if (p.effect === 'heal') return `${head} odzyskuje ${p.value} HP i ma teraz ${p.hp}.`
-        if (p.effect === 'bonus') return `${head} +${p.value} do ${BONUS_GENITIVE[p.stat] || p.stat} w tej rundzie.`
-        return `${head} ${p.effect}.`
+      mana_collected: p => `Mana z obwódek trafia do puli: ${p.gains.map(g => `${g.player} +${g.gained} (razem ${g.total})`).join(', ')}.`,
+      mana_stolen: p => (p.amount
+        ? `${p.thief} kradnie ${MANA(p.amount)} (${count(p.hands, FACES.hand)}). Mana: ${p.thief} ${p.thief_total}, ${p.victim} ${p.victim_total}.`
+        : `${p.thief}: ${count(p.hands, FACES.hand)} bez łupu, ${p.victim} nie ma many.`),
+      god_chosen: p => {
+        let text = `${p.player} wybiera łaskę: ${favorByGod(p.god)}, poziom ${p.level} (koszt ${MANA(p.cost)}).`
+        if (p.amount) text += ` Poświęci ${HP(p.amount)}.`
+        if (p.targets) {
+          const n = (p.targets.own || []).length + (p.targets.opponent || []).length
+          text += ` Wybrane kości: ${n}.`
+        }
+        return text
       },
-      god_failed: p => `${p.player} nie może użyć łaski ${gen(p.god)}: za mało many (${p.mana} z ${p.cost}).`,
+      god_skipped: p => `${p.player} nie korzysta z łaski w tej rundzie.`,
+      god_effect: p => `${p.player} · ${favor(p.effect).name}: ${favor(p.effect).log(p)}`,
+      god_failed: p => `${p.player} · ${favorByGod(p.god)}: za mało many (${p.mana} z ${p.cost}), łaska nie działa.`,
+      god_cancelled: p => `${p.player} · ${favorByGod(p.god)}: łaska przepada przez Kradzież Thryma, wydana mana (${p.cost}) nie wraca.`,
       attack: p => {
         const parts = []
         if (p.arrow) parts.push(`${count(p.arrow, FACES.arrow)} na ${count(p.shield, DEFENCE.shield)}`)
@@ -223,14 +383,15 @@ export const pl = {
     roundTitle: 'Przebieg rundy',
     steps: [
       { title: 'Rzuty kośćmi.', text: 'Gracze rzucają na zmianę sześcioma kośćmi. Po każdym rzucie zaznaczasz kości, które chcesz zatrzymać, a resztę rzucasz ponownie. Masz 3 rzuty, w ostatnim zostają wszystkie kości.' },
-      { title: 'Łaski bogów.', text: 'Każdy może kupić łaskę jednego ze swoich bogów albo ją pominąć. Łaska kosztuje manę, a wyższy poziom daje silniejszy efekt.' },
-      { title: 'Walka.', text: 'Działają łaski, a potem atakuje gracz, który zaczynał rundę, i po nim drugi. W następnej rundzie zaczyna drugi gracz.' }
+      { title: 'Mana.', text: 'Każda złota obwódka daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę, jeśli ją ma.' },
+      { title: 'Łaski bogów.', text: 'Każdy może kupić łaskę jednego ze swoich bogów albo ją pominąć. Wyższy poziom kosztuje więcej i daje silniejszy efekt.' },
+      { title: 'Walka.', text: 'Najpierw działają łaski „przed walką”, potem atakuje gracz, który zaczynał rundę, i po nim drugi, a na końcu łaski „po walce”. W następnej rundzie zaczyna drugi gracz.' }
     ],
     diceTitle: 'Kości',
     attackTitle: 'Jak liczy się atak',
     attackText: 'Każda strzała zadaje 1 obrażenie, chyba że zablokuje ją tarcza. Każdy topór zadaje 1 obrażenie, chyba że zablokuje go hełm. Na przykład 3 strzały na 1 tarczę to 2 obrażenia.',
     manaTitle: 'Mana i bogowie',
-    manaText: 'Mana z odłożonych kości trafia do puli po fazie rzutów, a niewydana zostaje na kolejne rundy. Przed grą wybierasz do 3 bogów. Po najechaniu na kartę boga zobaczysz, co robi, a po wybraniu poziomu: jego efekt i koszt.',
+    manaText: 'Mana z kości trafia do puli po fazie rzutów, a niewydana zostaje na kolejne rundy. Przed grą wybierasz do 3 z 20 bogów. Po najechaniu na kartę boga zobaczysz, co robi, a po wybraniu poziomu: jego efekt i koszt. Kilka łask wymaga dodatkowego wyboru: Frigg i Loki wskazują kości na stole, a Odyn i Tyr ile HP poświęcić.',
     ok: 'Rozumiem',
     close: 'Zamknij'
   },
@@ -247,7 +408,9 @@ export const pl = {
       classic: 'Drewno i złoto',
       frost: 'Mroźna północ',
       ember: 'Popiół i krew',
-      forest: 'Leśny mech'
+      forest: 'Leśny mech',
+      night: 'Noc polarna',
+      abyss: 'Otchłań Hel'
     },
     fonts: {
       classic: 'Klasyczna',
@@ -278,6 +441,10 @@ export const pl = {
     invalid_dice: 'Nieprawidłowy wybór kości.',
     invalid_level: 'Poziom łaski musi wynosić 1, 2 lub 3.',
     not_enough_mana: 'Za mało many: {god} na poziomie {level} kosztuje {cost}, a masz {mana}.',
+    invalid_amount: 'Możesz poświęcić od 1 do {max} HP.',
+    not_enough_hp: 'Masz za mało HP, żeby coś poświęcić.',
+    invalid_targets: 'Nieprawidłowy wybór kości dla łaski.',
+    targets_count: 'Wskaż od 1 do {max} kości.',
     join_first: 'Najpierw dołącz do gry.',
     already_playing_as: 'Grasz już jako {name}.',
     player_left: '{name} kończy partię. Możesz zacząć nową grę.',

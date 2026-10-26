@@ -7,7 +7,7 @@ export const LANGUAGES = [
   { id: 'pl', label: 'Polski' },
   { id: 'en', label: 'English' }
 ]
-export const THEMES = ['classic', 'frost', 'ember', 'forest']
+export const THEMES = ['classic', 'frost', 'ember', 'forest', 'night', 'abyss']
 export const FONTS = ['classic', 'medieval', 'readable']
 export const SIZES = ['normal', 'large']
 
