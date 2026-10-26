@@ -195,6 +195,7 @@ export const pl = {
     waitingHint: 'Drugi gracz wybiera ten stół z listy w menu i klika „Dosiądź się”.',
     howToPlay: 'Jak grać?',
     settings: 'Ustawienia',
+    newWindow: 'Nowe okno',
     status: {
       offline: 'Brak połączenia z serwerem. Sprawdź, czy backend działa (python main.py).',
       offlineApp: 'Brak połączenia z serwerem {server}. Adres zmienisz w ustawieniach.',
@@ -423,6 +424,8 @@ export const pl = {
     serverFormat: 'Bez numeru portu gra łączy się z portem 5000.',
     serverInvalid: 'To nie wygląda na adres serwera.',
     serverReset: 'Przywróć domyślny',
+    newWindow: 'Nowe okno gracza',
+    newWindowHint: 'Otwiera grę w drugim oknie jako osobny gracz, np. żeby sprawdzić rozgrywkę na jednym komputerze. Skrót: Ctrl+Shift+N.',
     version: 'Orlog {version}',
     sample: 'Topór, strzała i tarcza',
     themes: {

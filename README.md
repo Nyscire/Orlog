@@ -42,9 +42,11 @@ npm run dist:linux   # AppImage i .deb
 npm run dist:win     # instalator .exe (najprościej budować na Windowsie albo w GitHub Actions)
 ```
 
-Adres serwera aplikacja bierze z ustawień gry. Przy pierwszym uruchomieniu bez adresu okno ustawień otwiera się samo. Domyślny adres można wbudować przy budowaniu: `VITE_BACKEND_URL=https://orlog.example.com npm run dist`. Bez numeru portu gra łączy się z portem 5000 (`1.2.3.4` → `http://1.2.3.4:5000`).
+Adres serwera aplikacja bierze z ustawień gry. Uruchomiona z kodu (`npm run app`) od razu łączy się z serwerem na tym samym komputerze (`127.0.0.1:5000`). Zainstalowana bez wbudowanego adresu otwiera ustawienia przy pierwszym starcie. Domyślny adres można wbudować przy budowaniu: `VITE_BACKEND_URL=https://orlog.example.com npm run dist`. Bez numeru portu gra łączy się z portem 5000 (`1.2.3.4` → `http://1.2.3.4:5000`), a `localhost` zamienia na `127.0.0.1`, bo serwer domyślnie słucha tylko na IPv4.
 
-Skróty w aplikacji: F11 to pełny ekran, Ctrl + plus/minus/0 to powiększenie, a F5 albo Ctrl+R przeładowanie. Narzędzia deweloperskie (F12) są w wersji z `npm run app`, a w zainstalowanej po uruchomieniu z `--devtools`.
+Drugi gracz na tym samym komputerze: „Nowe okno” w stopce menu, przycisk w ustawieniach, skrót Ctrl+Shift+N albo ponowne uruchomienie aplikacji. Każde takie okno to osobny gracz z własną, tymczasową pamięcią (bez sesji i imienia z pierwszego okna). Ustawienia wyglądu i adres serwera kopiuje z okna, z którego je otwarto.
+
+Skróty w aplikacji: F11 to pełny ekran, Ctrl + plus/minus/0 to powiększenie, a F5 albo Ctrl+R przeładowanie. Narzędzia deweloperskie (F12) są w wersji z `npm run app`, a w zainstalowanej po uruchomieniu z `--devtools`. Jeśli na Ubuntu aplikacja z `npm run app` nie startuje z błędem o „SUID sandbox”, uruchom ją przez `npm run app -- --no-sandbox`.
 
 ### Instalatory z GitHuba
 

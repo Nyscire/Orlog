@@ -177,6 +177,7 @@ export const en = {
     waitingHint: 'The other player picks this table from the list in the menu and clicks "Take a seat".',
     howToPlay: 'How to play?',
     settings: 'Settings',
+    newWindow: 'New window',
     status: {
       offline: 'No connection to the server. Check that the backend is running (python main.py).',
       offlineApp: 'No connection to the server {server}. You can change the address in the settings.',
@@ -404,6 +405,8 @@ export const en = {
     serverFormat: 'Without a port number the game connects to port 5000.',
     serverInvalid: 'This does not look like a server address.',
     serverReset: 'Restore default',
+    newWindow: 'New player window',
+    newWindowHint: 'Opens the game in another window as a separate player, e.g. to try a game on one computer. Shortcut: Ctrl+Shift+N.',
     version: 'Orlog {version}',
     sample: 'Axe, arrow and shield',
     themes: {

@@ -33,6 +33,12 @@
         </p>
       </section>
 
+      <!-- tylko w aplikacji: drugie okno jako osobny gracz, np. do testu na jednym komputerze -->
+      <section v-if="canOpenWindow" class="window-section">
+        <button type="button" class="btn btn-ghost window-btn" @click="newWindow">{{ $t('settings.newWindow') }}</button>
+        <span class="server-hint">{{ $t('settings.newWindowHint') }}</span>
+      </section>
+
       <section>
         <h3>{{ $t('settings.language') }}</h3>
         <div class="segmented">
@@ -116,7 +122,7 @@
 
 <script>
 import { FONTS, LANGUAGES, SIZES, THEMES, setSetting, settings } from '../settings'
-import { appVersion, defaultServer, normalizeServer, saveServer, savedServer, serverUrl } from '../server'
+import { appVersion, canOpenWindow, defaultServer, normalizeServer, openPlayerWindow, saveServer, savedServer, serverUrl } from '../server'
 
 export default {
   name: 'SettingsDialog',
@@ -144,6 +150,9 @@ export default {
     },
     version() {
       return appVersion
+    },
+    canOpenWindow() {
+      return canOpenWindow
     },
     languages() {
       return LANGUAGES
@@ -176,6 +185,9 @@ export default {
       }
       // nowe połączenie najprościej zacząć od świeżego okna
       window.location.reload()
+    },
+    newWindow() {
+      openPlayerWindow()
     },
     resetServer() {
       saveServer('')
@@ -297,6 +309,22 @@ section + section {
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer;
+}
+
+.window-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.window-btn {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+}
+
+.window-section .server-hint {
+  margin: 0;
 }
 
 .version {

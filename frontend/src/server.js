@@ -1,19 +1,30 @@
 // Adres serwera gry.
 //
 // Kolejność: adres wpisany w ustawieniach > adres wbudowany przy budowaniu (VITE_BACKEND_URL)
-// > ten sam host co strona, port 5000 (gdy gra działa w przeglądarce, np. npm run dev).
-// W aplikacji (Electron) strona nie ma „swojego” hosta, więc bez dwóch pierwszych adresu nie ma.
+// > ten sam host co strona, port 5000 (gdy gra działa w przeglądarce, np. npm run dev)
+// > serwer na tym komputerze (aplikacja uruchomiona z kodu: npm run app).
+// Zainstalowana aplikacja bez wbudowanego adresu prosi o adres przy pierwszym starcie.
 const STORAGE_KEY = 'orlog.server'
 const DEFAULT_PORT = 5000
 
 export const isApp = typeof window !== 'undefined' && !!(window.orlog && window.orlog.app)
 export const appVersion = (isApp && window.orlog.version) || ''
+// aplikacja z instalatora (a nie uruchomiona z kodu przez npm run app)
+export const isPackaged = isApp && !!window.orlog.packaged
+// okno kolejnego gracza (Ctrl+Shift+N), dostępne tylko w aplikacji
+export const canOpenWindow = isApp && typeof window.orlog.newWindow === 'function'
+
+export function openPlayerWindow() {
+  if (canOpenWindow) window.orlog.newWindow()
+}
+
+const LOCAL_SERVER = `http://127.0.0.1:${DEFAULT_PORT}`
 
 function pageServer() {
   if (typeof window === 'undefined') return ''
   const { protocol, hostname } = window.location
   if (protocol !== 'http:' && protocol !== 'https:') return ''
-  return `${protocol}//${hostname}:${DEFAULT_PORT}`
+  return normalizeServer(`${protocol}//${hostname}:${DEFAULT_PORT}`) || ''
 }
 
 export function builtInServer() {
@@ -21,7 +32,7 @@ export function builtInServer() {
 }
 
 export function defaultServer() {
-  return builtInServer() || pageServer()
+  return builtInServer() || pageServer() || (isApp && !isPackaged ? LOCAL_SERVER : '')
 }
 
 export function savedServer() {
@@ -33,7 +44,8 @@ export function savedServer() {
 }
 
 export function serverUrl() {
-  return savedServer() || defaultServer()
+  // zapisane wcześniej „localhost” też zamieniamy na 127.0.0.1
+  return normalizeServer(savedServer()) || defaultServer()
 }
 
 // "1.2.3.4" -> "http://1.2.3.4:5000", "gra.example.com:8000" -> "http://gra.example.com:8000",
@@ -51,6 +63,8 @@ export function normalizeServer(input) {
   if (url.protocol !== 'http:' && url.protocol !== 'https:') return null
   if (!url.hostname || url.username || url.password) return null
   if (!hasScheme && !url.port) url.port = String(DEFAULT_PORT)
+  // „localhost” bywa najpierw rozwiązywany na IPv6 (::1), a serwer domyślnie słucha tylko na IPv4
+  if (url.hostname === 'localhost') url.hostname = '127.0.0.1'
   // sam adres serwera, bez ścieżki i parametrów
   return url.origin
 }
