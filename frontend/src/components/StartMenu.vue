@@ -20,80 +20,131 @@
       <div class="divider" aria-hidden="true"><span></span><i></i><span></span></div>
     </header>
 
-    <section class="panel">
-      <template v-if="!joined">
-        <div v-if="notice" class="notice">{{ notice }}</div>
-        <div v-if="gameInProgress" class="notice">
-          {{ $t('menu.gameInProgress', { players: lobby.players.join($t('menu.and')) }) }}
-        </div>
+    <!-- lista stołów: po lewej gracz i bogowie, po prawej stoły -->
+    <section v-if="!seated" class="panel lobby-panel">
+      <div v-if="notice" class="notice">{{ notice }}</div>
 
-        <label class="field-label" for="player-name">{{ $t('menu.yourName') }}</label>
-        <input
-          id="player-name"
-          v-model="name"
-          class="name-input"
-          maxlength="20"
-          :placeholder="$t('menu.namePlaceholder')"
-          autocomplete="off"
-          @keyup.enter="join"
-        />
+      <div class="lobby">
+        <div class="you">
+          <label class="field-label" for="player-name">{{ $t('menu.yourName') }}</label>
+          <input
+            id="player-name"
+            v-model="name"
+            class="name-input"
+            maxlength="20"
+            :placeholder="$t('menu.namePlaceholder')"
+            autocomplete="off"
+          />
 
-        <div class="gods-header">
-          <span class="field-label">{{ $t('menu.godsLabel') }}</span>
-          <span class="gods-counter" :class="{ full: selected.length === maxGods }">
-            {{ selected.length }} / {{ maxGods }}
-          </span>
-        </div>
-        <p class="hint">{{ $t('menu.godsHint') }}</p>
-
-        <div v-if="gods.length === 0" class="hint">{{ $t('menu.loadingGods') }}</div>
-        <template v-else>
-          <div class="gods-grid" @mouseleave="hovered = null">
-            <button
-              v-for="god in gods"
-              :key="god.name"
-              type="button"
-              class="god-option"
-              :class="{ selected: isSelected(god), locked: isLocked(god), focused: detailGod && detailGod.name === god.name }"
-              :aria-pressed="isSelected(god)"
-              :aria-label="`${$t('gods.name', god)}: ${$t('gods.favor', god)}`"
-              @click="toggle(god)"
-              @mouseenter="hovered = god.name"
-              @focus="hovered = god.name"
-            >
-              <span v-if="isSelected(god)" class="check" aria-hidden="true">✓</span>
-              <img :src="icon(god)" alt="" class="god-icon" />
-              <span class="god-name">{{ $t('gods.name', god) }}</span>
-              <span class="god-favor">{{ $t('gods.favor', god) }}</span>
-            </button>
+          <div class="gods-header">
+            <span class="field-label">{{ $t('menu.godsLabel') }}</span>
+            <span class="gods-counter" :class="{ full: selected.length === maxGods }">
+              {{ selected.length }} / {{ maxGods }}
+            </span>
           </div>
 
-          <!-- opis boga pod kursorem (albo ostatnio wybranego) -->
-          <div v-if="detailGod" class="god-detail" aria-live="polite">
-            <img :src="icon(detailGod)" alt="" class="detail-icon" />
-            <div class="detail-text">
-              <div class="detail-head">
-                <strong>{{ $t('gods.favor', detailGod) }}</strong>
-                <span class="detail-phase">{{ $t('gods.phase.' + detailGod.phase) }}</span>
-                <span class="detail-costs">{{ $t('menu.costs', { costs: detailGod.mana_costs.join(' / ') }) }}</span>
+          <div v-if="gods.length === 0" class="hint">{{ $t('menu.loadingGods') }}</div>
+          <template v-else>
+            <div class="gods-grid" @mouseleave="hovered = null">
+              <button
+                v-for="god in gods"
+                :key="god.name"
+                type="button"
+                class="god-option"
+                :class="{ selected: isSelected(god), locked: isLocked(god), focused: detailGod && detailGod.name === god.name }"
+                :aria-pressed="isSelected(god)"
+                :aria-label="`${$t('gods.name', god)}: ${$t('gods.favor', god)}`"
+                @click="toggle(god)"
+                @mouseenter="hovered = god.name"
+                @focus="hovered = god.name"
+              >
+                <span v-if="isSelected(god)" class="check" aria-hidden="true">✓</span>
+                <img :src="icon(god)" alt="" class="god-icon" />
+                <span class="god-name">{{ $t('gods.name', god) }}</span>
+                <span class="god-favor">{{ $t('gods.favor', god) }}</span>
+              </button>
+            </div>
+
+            <!-- opis boga pod kursorem (albo ostatnio wybranego) -->
+            <div v-if="detailGod" class="god-detail" aria-live="polite">
+              <img :src="icon(detailGod)" alt="" class="detail-icon" />
+              <div class="detail-text">
+                <div class="detail-head">
+                  <strong>{{ $t('gods.favor', detailGod) }}</strong>
+                  <span class="detail-phase">{{ $t('gods.phase.' + detailGod.phase) }}</span>
+                  <span class="detail-costs">{{ $t('menu.costs', { costs: detailGod.mana_costs.join(' / ') }) }}</span>
+                </div>
+                <div>{{ $t('gods.describe', detailGod) }}</div>
               </div>
-              <div>{{ $t('gods.describe', detailGod) }}</div>
+            </div>
+          </template>
+        </div>
+
+        <div class="tables-col">
+          <div class="tables-inner">
+            <div class="tables-header">
+              <span class="field-label">{{ $t('lobby.title') }}</span>
+              <span class="tables-count">{{ $t('lobby.count', { n: tables.length }) }}</span>
+            </div>
+
+            <form class="create-form" @submit.prevent="createTable">
+              <input
+                v-model="tableName"
+                class="table-name-input"
+                maxlength="30"
+                :placeholder="$t('lobby.namePlaceholder')"
+                :aria-label="$t('lobby.namePlaceholder')"
+                autocomplete="off"
+              />
+              <button type="submit" class="btn btn-gold create-btn" :disabled="!canSit || serverFull">
+                {{ $t('lobby.create') }}
+              </button>
+            </form>
+
+            <p v-if="error" class="error">{{ error }}</p>
+            <p v-else-if="serverFull" class="hint">{{ $t('lobby.full', { max: lobby.max_tables }) }}</p>
+            <p v-else-if="!canSit && connected" class="hint">{{ $t('lobby.needSetup') }}</p>
+
+            <ul v-if="tables.length" class="tables-list">
+              <li v-for="table in tables" :key="table.id" class="table-row" :class="{ open: table.open }">
+                <div class="table-main">
+                  <div class="table-title">
+                    <span class="table-name">{{ tableTitle(table) }}</span>
+                    <span class="table-code">#{{ table.id }}</span>
+                  </div>
+                  <div class="table-meta">{{ tableStatus(table) }}</div>
+                </div>
+                <button
+                  v-if="table.open"
+                  type="button"
+                  class="btn btn-gold join-btn"
+                  :disabled="!canSit"
+                  @click="joinTable(table)"
+                >
+                  {{ $t('lobby.join') }}
+                </button>
+                <span v-else class="table-busy">{{ $t('lobby.busy') }}</span>
+              </li>
+            </ul>
+            <div v-else class="tables-empty">
+              <span class="empty-rune" aria-hidden="true">ᛟ</span>
+              {{ $t('lobby.empty') }}
             </div>
           </div>
-        </template>
+        </div>
+      </div>
+    </section>
 
-        <p v-if="error" class="error">{{ error }}</p>
-        <button class="btn btn-gold join-btn" :disabled="!canJoin" @click="join">
-          {{ othersWaiting.length ? $t('menu.playWith', { names: othersWaiting.join(', ') }) : $t('menu.join') }}
-        </button>
-      </template>
-
-      <div v-else class="waiting">
+    <!-- przy stole, czekamy na rywala -->
+    <section v-else class="panel waiting-panel">
+      <div class="waiting">
         <div class="waiting-runes" aria-hidden="true"><span>ᚠ</span><span>ᚢ</span><span>ᚦ</span></div>
+        <div v-if="table" class="table-badge">{{ tableTitle(table) }} <span class="table-code">#{{ table.id }}</span></div>
+        <div v-if="notice" class="notice">{{ notice }}</div>
         <h2>{{ $t('menu.waitingTitle') }}</h2>
-        <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: chosenGodNames }) }}</p>
+        <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: myGodsText }) }}</p>
         <p class="hint">{{ $t('menu.waitingHint') }}</p>
-        <button class="btn btn-ghost" @click="$emit('leave')">{{ $t('menu.changeChoice') }}</button>
+        <button class="btn btn-ghost" @click="$emit('leave')">{{ $t('lobby.leave') }}</button>
       </div>
     </section>
 
@@ -117,28 +168,35 @@ const STORAGE_KEY = 'orlog.player'
 export default {
   name: 'StartMenu',
   props: {
+    // lista stołów z serwera: { tables, gods, max_gods, max_tables, full }
     lobby: {
       type: Object,
       default: null
     },
     connected: Boolean,
-    joined: Boolean,
+    seated: Boolean,
     playerName: {
       type: String,
       default: ''
     },
-    chosenGods: {
+    // stół, przy którym siedzi gracz: { id, name, host }
+    table: {
+      type: Object,
+      default: null
+    },
+    myGods: {
       type: Array,
       default: () => []
     },
     error: String,
-    // informacja po zakończeniu partii przez przeciwnika
+    // np. przeciwnik wstał od stołu albo miejsce wygasło
     notice: String
   },
-  emits: ['join', 'leave', 'help', 'settings'],
+  emits: ['create-table', 'join-table', 'leave', 'help', 'settings'],
   data() {
     return {
       name: '',
+      tableName: '',
       selected: [],
       hovered: null,
       lastPicked: null
@@ -154,33 +212,30 @@ export default {
     gods() {
       return this.lobby?.gods || []
     },
+    tables() {
+      return this.lobby?.tables || []
+    },
     maxGods() {
       return this.lobby?.max_gods || 3
+    },
+    serverFull() {
+      return !!this.lobby?.full
     },
     detailGod() {
       const name = this.hovered || this.lastPicked || this.selected[0]
       return this.gods.find(g => g.name === name) || this.gods[0] || null
     },
-    chosenGodNames() {
-      return this.chosenGods.map(name => this.$t('gods.name', { name })).join(', ')
+    myGodsText() {
+      return this.myGods.map(name => this.$t('gods.name', { name })).join(', ')
     },
-    gameInProgress() {
-      return !!this.lobby && this.lobby.stage !== 'waiting'
-    },
-    othersWaiting() {
-      if (!this.lobby || this.gameInProgress) return []
-      return this.lobby.players.filter(n => n !== this.playerName)
-    },
-    canJoin() {
+    canSit() {
       return this.connected && this.name.trim().length > 0 &&
         this.selected.length >= 1 && this.selected.length <= this.maxGods
     },
     statusText() {
       if (!this.connected) return this.$t('menu.status.offline')
-      if (this.joined) return this.$t('menu.status.joined')
-      if (this.gameInProgress) return this.$t('menu.status.inProgress')
-      if (this.othersWaiting.length) return this.$t('menu.status.waiting', { names: this.othersWaiting.join(', ') })
-      return this.$t('menu.status.empty')
+      if (this.seated) return this.$t('menu.status.joined')
+      return this.$t('menu.status.online', { tables: this.$t('lobby.count', { n: this.tables.length }) })
     }
   },
   watch: {
@@ -209,11 +264,11 @@ export default {
       this.selected = this.selected.filter(n => names.includes(n)).slice(0, this.maxGods)
       if (!this.selected.length) this.selected = names.slice(0, this.maxGods)
     },
-    isSelected(god) {
-      return this.selected.includes(god.name)
-    },
     icon(god) {
       return godIcon(god.name)
+    },
+    isSelected(god) {
+      return this.selected.includes(god.name)
     },
     isLocked(god) {
       return !this.isSelected(god) && this.selected.length >= this.maxGods
@@ -228,15 +283,32 @@ export default {
     setLanguage(id) {
       setSetting('locale', id)
     },
-    join() {
-      if (!this.canJoin) return
+    tableTitle(table) {
+      return table.name || this.$t('lobby.defaultName', { host: table.host })
+    },
+    tableStatus(table) {
+      const players = table.players.join(' vs ')
+      if (table.stage === 'waiting') return this.$t('lobby.waitingFor', { name: table.players[0] || '' })
+      if (table.stage === 'finished') return this.$t('lobby.finished', { players })
+      return this.$t('lobby.playing', { players, round: table.round })
+    },
+    // imię i bogowie, z którymi gracz siada przy stole (zapamiętane na następny raz)
+    player() {
       const player = { name: this.name.trim(), gods: [...this.selected] }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(player))
       } catch (e) {
         // jak wyżej
       }
-      this.$emit('join', player)
+      return player
+    },
+    createTable() {
+      if (!this.canSit || this.serverFull) return
+      this.$emit('create-table', { ...this.player(), tableName: this.tableName.trim() })
+    },
+    joinTable(table) {
+      if (!this.canSit || !table.open) return
+      this.$emit('join-table', { ...this.player(), table: table.id })
     }
   }
 }
@@ -386,11 +458,13 @@ export default {
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.35);
 }
 
-.gods-header {
+.gods-header,
+.tables-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 .gods-counter {
@@ -551,17 +625,198 @@ export default {
 }
 
 .error {
-  margin: 1rem 0 0;
+  margin: 0.25rem 0 0.5rem;
+  font-size: 0.85rem;
   color: var(--blood);
   font-weight: 600;
 }
 
+/* ---------- lista stołów ---------- */
+
+.lobby-panel {
+  width: min(1180px, 100%);
+}
+
+.waiting-panel {
+  width: min(620px, 100%);
+}
+
+.lobby {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(300px, 1fr);
+  gap: 1.5rem;
+}
+
+/* prawa kolumna ma wysokość lewej, a lista stołów przewija się w środku */
+.tables-col {
+  position: relative;
+  min-height: 18rem;
+  padding-left: 1.5rem;
+  border-left: 1px solid var(--parchment-3);
+}
+
+.tables-inner {
+  position: absolute;
+  inset: 0 0 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.tables-count {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.create-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.table-name-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--input-bg);
+  border: 1.5px solid var(--edge);
+  border-radius: 8px;
+}
+
+.table-name-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.35);
+}
+
+.create-btn {
+  flex: 0 0 auto;
+  padding: 0.45rem 1rem;
+  white-space: nowrap;
+}
+
+.tables-list {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0.25rem 0 0;
+  padding: 0 0.15rem 0 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.table-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  background: var(--glass);
+  border: 1px solid var(--parchment-3);
+  border-radius: 9px;
+}
+
+.table-row.open {
+  background: var(--card);
+  border-color: var(--edge);
+}
+
+.table-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.table-title {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.table-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-title);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.table-code {
+  flex: 0 0 auto;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.table-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
 .join-btn {
-  display: block;
-  width: 100%;
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
-  font-size: 1.05rem;
+  flex: 0 0 auto;
+  padding: 0.35rem 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.table-busy {
+  flex: 0 0 auto;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--shade);
+  border-radius: 999px;
+}
+
+.tables-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  font-size: 0.85rem;
+  text-align: center;
+  color: var(--ink-soft);
+  border: 1.5px dashed var(--parchment-3);
+  border-radius: 10px;
+}
+
+.empty-rune {
+  font-size: 1.6rem;
+  color: var(--gold-dark);
+  opacity: 0.7;
+}
+
+.table-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  margin: 0.5rem 0 0.25rem;
+  padding: 0.25rem 0.8rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  background: var(--glass-2);
+  border: 1px solid var(--parchment-3);
+  border-radius: 999px;
+}
+
+.waiting .notice {
+  margin: 0.5rem 0;
+  text-align: left;
 }
 
 .waiting {
@@ -681,17 +936,8 @@ export default {
     padding-bottom: 0.45rem;
   }
 
-  .join-btn {
-    margin-top: 0.75rem;
-    padding-top: 0.6rem;
-    padding-bottom: 0.6rem;
-  }
-
-  .gods-header + .hint {
-    display: none;
-  }
-
-  .gods-header {
+  .gods-header,
+  .tables-header {
     margin-bottom: 0.4rem;
   }
 
@@ -724,7 +970,43 @@ export default {
   }
 }
 
+/* węższy ekran: stoły pod wyborem bogów */
+@media (max-width: 980px) {
+  .lobby {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tables-col {
+    min-height: 0;
+    padding-left: 0;
+    padding-top: 1rem;
+    border-left: none;
+    border-top: 1px solid var(--parchment-3);
+  }
+
+  .tables-inner {
+    position: static;
+  }
+
+  .tables-list,
+  .tables-empty {
+    flex: 0 0 auto;
+  }
+
+  .tables-list {
+    max-height: 22rem;
+  }
+}
+
 @media (max-width: 600px) {
+  .create-form {
+    flex-wrap: wrap;
+  }
+
+  .create-btn {
+    flex: 1 1 100%;
+  }
+
   .panel {
     padding: 1.1rem;
   }

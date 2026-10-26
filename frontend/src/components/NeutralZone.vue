@@ -1,8 +1,13 @@
 <template>
   <div class="neutral-zone">
     <div class="stage-indicator">
-      <div class="stage-badge" :class="stageClass">
-        {{ stageText }}<span v-if="round && stage !== 'waiting'"> · {{ $t('neutral.round', { n: round }) }}</span>
+      <div class="stage-left">
+        <div class="stage-badge" :class="stageClass">
+          {{ stageText }}<span v-if="round && stage !== 'waiting'"> · {{ $t('neutral.round', { n: round }) }}</span>
+        </div>
+        <span v-if="table" class="table-label" :title="$t('neutral.tableCode', { code: table.id })">
+          {{ table.name || $t('lobby.defaultName', { host: table.host }) }} <span class="table-code">#{{ table.id }}</span>
+        </span>
       </div>
       <div class="stage-right">
         <div class="turn-indicator" v-if="activePlayer">
@@ -103,6 +108,11 @@ export default {
     activePlayer: String,
     winner: String,
     round: Number,
+    // stół, przy którym toczy się partia: { id, name, host }
+    table: {
+      type: Object,
+      default: null
+    },
     log: {
       type: Array,
       default: () => []
@@ -187,6 +197,34 @@ export default {
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.stage-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+
+.stage-left .stage-badge {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.table-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-title);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.table-code {
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.05em;
 }
 
 .stage-badge {

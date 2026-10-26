@@ -28,7 +28,7 @@ VITE_BACKEND_URL=http://192.168.0.10:5000
 
 ## Zasady w skrócie
 
-- Przed grą każdy wpisuje imię i wybiera do 3 z 20 bogów, których łaski będzie mógł użyć w partii.
+- Przed grą każdy wpisuje imię, wybiera do 3 z 20 bogów, a potem zakłada stół albo dosiada się do wolnego stołu z listy. Partia zaczyna się, gdy przy stole siedzi dwóch graczy.
 - Gracze na zmianę rzucają kośćmi i odkładają te, które chcą zatrzymać. Każdy ma 3 rzuty, w ostatnim zostają wszystkie kości.
 - Po rzutach liczy się mana: każda kość ze złotą obwódką daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę (jeśli ją ma).
 - Potem każdy wybiera łaskę boga (albo ją pomija). Frigg i Loki wskazują kości na stole, a Odyn i Tyr ile HP poświęcić.
@@ -37,7 +37,18 @@ VITE_BACKEND_URL=http://192.168.0.10:5000
 
 W środku planszy jest dziennik z przebiegiem każdej rundy: jakie kości mają gracze, jakie łaski wybrali, co zrobiły łaski i jak poszedł atak. Przycisk „Jak grać?” (w menu i na planszy) otwiera krótkie zasady z opisem każdej kości.
 
-Po odświeżeniu strony wystarczy wpisać tę samą nazwę, żeby wrócić do gry. Jeśli przeciwnik się rozłączy, na górze planszy pojawia się informacja i można poczekać na jego powrót albo zakończyć partię. Przycisk „Opuść grę” kończy partię dla obu graczy i wraca do menu. Serwer obsługuje jedną grę naraz.
+## Stoły
+
+Serwer prowadzi wiele partii naraz, każdą przy osobnym stole (do 50 stołów). W menu po prawej jest lista stołów: najpierw te z wolnym miejscem (przycisk „Dosiądź się”), potem trwające partie. Stół można nazwać, a bez nazwy wyświetla się jako „Stół gracza X”. Każdy stół ma czteroznakowy kod, widoczny też na planszy. Imię gracza jest unikalne na całym serwerze.
+
+- Po odświeżeniu strony gra sama wraca na twoje miejsce: przy siadaniu serwer daje token, który zostaje w przeglądarce. Otwarcie gry w drugiej karcie przenosi miejsce do nowej karty.
+- „Wstań od stołu” kończy partię. Przeciwnik zostaje przy stole i czeka na nowego rywala, a stół znów pojawia się na liście jako wolny.
+- Jeśli przeciwnik się rozłączy, na górze planszy pojawia się informacja i można poczekać na jego powrót albo wstać od stołu.
+- Stół, przy którym czeka rozłączony gracz, znika z listy od razu i zwalnia się po 30 s. Partia, w której obaj gracze są offline, jest usuwana po 5 minutach.
+
+Stołami zarządza `TableManager` w `backend/tables.py` (bez Socket.IO, więc łatwo go testować). `backend/main.py` tylko tłumaczy zdarzenia Socket.IO na jego metody. Każdy stół to pokój Socket.IO, więc stan gry dostają tylko gracze przy tym stole, a listę stołów wszyscy.
+
+Zdarzenia od klienta: `get_tables`, `create_table {name, gods, table_name}`, `join_table {table, name, gods}`, `resume {name, token}`, `leave_table`, a w trakcie gry `confirm_dice`, `choose_god`, `new_game`. Serwer wysyła `tables`, `seated {name, token, table}`, `game_state` (z polami `table` i `notice`), `join_rejected`, `resume_failed`, `seat_lost` i `error_message`.
 
 ## Ustawienia
 

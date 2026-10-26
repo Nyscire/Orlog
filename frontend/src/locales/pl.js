@@ -187,33 +187,42 @@ export const pl = {
     yourName: 'Twoje imię',
     namePlaceholder: 'np. Eivor',
     godsLabel: 'Bogowie, których zabierasz do gry',
-    godsHint: 'Ich łaski będziesz mógł wykupić maną w trakcie partii.',
     loadingGods: 'Wczytuję bogów z serwera…',
     costs: 'Mana: {costs}',
-    join: 'Dołącz do gry',
-    playWith: 'Zagraj z: {names}',
-    gameInProgress: 'Trwa partia: {players}. Jeśli to Ty, wpisz to samo imię, żeby wrócić do gry.',
-    and: ' i ',
     waitingTitle: 'Czekamy na drugiego gracza',
     playingAs: 'Grasz jako',
     withGods: 'bogowie: {gods}.',
-    waitingHint: 'Drugi gracz otwiera tę samą stronę i wpisuje swoje imię.',
-    changeChoice: 'Zmień imię albo bogów',
+    waitingHint: 'Drugi gracz wybiera ten stół z listy w menu i klika „Dosiądź się”.',
     howToPlay: 'Jak grać?',
     settings: 'Ustawienia',
     status: {
       offline: 'Brak połączenia z serwerem. Sprawdź, czy backend działa (python main.py).',
       joined: 'Połączono z serwerem',
-      inProgress: 'Połączono · na serwerze trwa partia',
-      waiting: 'Połączono · na rywala czeka: {names}',
-      empty: 'Połączono · nikt jeszcze nie czeka'
+      online: 'Połączono · {tables}'
     }
+  },
+
+  lobby: {
+    title: 'Stoły',
+    count: ({ n }) => `${n} ${plural(n, ['stół', 'stoły', 'stołów'])}`,
+    namePlaceholder: 'Nazwa stołu (opcjonalnie)',
+    create: 'Załóż stół',
+    join: 'Dosiądź się',
+    busy: 'W grze',
+    empty: 'Nie ma jeszcze żadnego stołu. Załóż pierwszy, a drugi gracz dosiądzie się z listy.',
+    defaultName: 'Stół gracza {host}',
+    waitingFor: 'Czeka {name}',
+    playing: '{players} · runda {round}',
+    finished: '{players} · koniec partii',
+    needSetup: 'Wpisz imię i wybierz bogów, żeby usiąść przy stole.',
+    full: 'Na serwerze jest już komplet stołów ({max}). Dosiądź się do któregoś z listy.',
+    leave: 'Wstań od stołu'
   },
 
   board: {
     selfOffline: 'Utracono połączenie z serwerem. Próbuję połączyć ponownie…',
-    opponentOffline: 'jest offline. Gra poczeka, aż przeciwnik wróci pod tym samym imieniem. Możesz też zakończyć partię.',
-    endGame: 'Zakończ partię'
+    opponentOffline: 'jest offline. Gra poczeka, aż przeciwnik wróci. Możesz też wstać od stołu.',
+    endGame: 'Wstań od stołu'
   },
 
   stage: {
@@ -231,9 +240,10 @@ export const pl = {
     turnOf: 'Ruch:',
     howToPlay: 'Jak grać?',
     settings: 'Ustawienia',
-    leave: 'Opuść grę',
-    leaveConfirm: 'Zakończyć partię dla obu graczy?',
-    leaveYes: 'Tak, wyjdź',
+    leave: 'Wstań od stołu',
+    leaveConfirm: 'Wstać od stołu? Partia się zakończy.',
+    leaveYes: 'Tak, wstań',
+    tableCode: 'Kod stołu: {code}',
     no: 'Nie',
     yourSaved: 'Twoje odłożone kości',
     opponentSaved: 'Odłożone kości przeciwnika',
@@ -446,8 +456,15 @@ export const pl = {
     invalid_targets: 'Nieprawidłowy wybór kości dla łaski.',
     targets_count: 'Wskaż od 1 do {max} kości.',
     join_first: 'Najpierw dołącz do gry.',
-    already_playing_as: 'Grasz już jako {name}.',
-    player_left: '{name} kończy partię. Możesz zacząć nową grę.',
+    already_seated: 'Siedzisz już przy stole jako {name}.',
+    player_left: '{name} wstaje od stołu. Poczekaj na nowego rywala albo wróć do listy stołów.',
+    table_not_found: 'Tego stołu już nie ma albo gospodarz jest offline.',
+    table_full: 'Przy tym stole nie ma już wolnego miejsca.',
+    too_many_tables: 'Na serwerze jest już {max} stołów. Dosiądź się do któregoś z listy.',
+    table_name_too_long: 'Nazwa stołu może mieć najwyżej {max} znaków.',
+    invalid_table_name: 'Nieprawidłowa nazwa stołu.',
+    seat_not_found: 'Twoje miejsce przy stole wygasło. Wybierz stół z listy.',
+    seat_taken_over: 'Grasz teraz w innej karcie albo oknie.',
     unknown: 'Coś poszło nie tak ({code}).'
   }
 }
