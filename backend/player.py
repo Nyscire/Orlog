@@ -7,7 +7,7 @@ from die import Die
 
 log = logging.getLogger(__name__)
 
-STATS = ("mana", "arrow", "axe", "shield", "helmet")
+FACES = ("axe", "arrow", "helmet", "shield", "hand")
 
 
 class Player:
@@ -24,8 +24,10 @@ class Player:
         self.gods: List[God] = gods
         self.chosen_god: Optional[God] = None
         self.chosen_level: Optional[int] = None
+        self.chosen_choice: Dict[str, object] = {}   # dodatkowy wybór łaski (kości, ile HP)
         # Tymczasowe bonusy z łask bogów, ważne do końca rundy
         self.bonus_stats: Dict[str, int] = {}
+        self.shield_ignore: int = 0   # ile tarcz przeciwnika omijają strzały (Celność Ullra)
         self.rzuty: int = self.THROWS
         # czy mana z kości tej rundy jest już w puli
         self.mana_collected: bool = False
@@ -47,17 +49,19 @@ class Player:
             self.rzuty = 0
 
     def attack(self, enemy: Player) -> Dict[str, int]:
-        my_stats = self.temp_stats
-        enemy_stats = enemy.temp_stats
+        me, them = self.temp_stats, enemy.temp_stats
+        arrows, axes = max(me["arrow"], 0), max(me["axe"], 0)
+        shields = max(them["shield"] - self.shield_ignore, 0)
+        helmets = max(them["helmet"], 0)
 
-        arrow_dmg = max(my_stats["arrow"] - enemy_stats["shield"], 0)
-        axe_dmg = max(my_stats["axe"] - enemy_stats["helmet"], 0)
+        arrow_dmg = max(arrows - shields, 0)
+        axe_dmg = max(axes - helmets, 0)
         dmg = arrow_dmg + axe_dmg
         log.debug("%s atakuje %s: strzały %d, topory %d, razem %d",
                   self.name, enemy.name, arrow_dmg, axe_dmg, dmg)
         enemy.hp -= dmg
-        return {"arrow": my_stats["arrow"], "shield": enemy_stats["shield"],
-                "axe": my_stats["axe"], "helmet": enemy_stats["helmet"], "dmg": dmg}
+        return {"arrow": arrows, "shield": shields, "axe": axes, "helmet": helmets, "dmg": dmg,
+                "blocked": min(arrows, shields) + min(axes, helmets), "axe_dmg": axe_dmg}
 
     @property
     def can_roll(self) -> bool:
@@ -65,9 +69,12 @@ class Player:
 
     @property
     def dice_stats(self) -> Dict[str, int]:
-        """Statystyki wynikające wyłącznie z zachowanych kości."""
-        stat_summary = {stat: 0 for stat in STATS}
+        """Ścianki zachowanych kości (bez zablokowanych) i liczba złotych obwódek ("mana")."""
+        stat_summary = {face: 0 for face in FACES}
+        stat_summary["mana"] = 0
         for die in self.saved_dice:
+            if die.banned:
+                continue
             stat_summary[die.stat] = stat_summary.get(die.stat, 0) + 1
             if die.gives_mana:
                 stat_summary["mana"] += 1
@@ -86,8 +93,8 @@ class Player:
         """Mana, którą gracz będzie miał w chwili aktywacji łaski (przed walką)."""
         return self.mana if self.mana_collected else self.mana + self.dice_stats["mana"]
 
-    def collect_dice_mana(self) -> int:
-        """Dodaje do puli manę z odłożonych kości (raz na rundę) i zwraca, ile jej było."""
+    def collect_gold_mana(self) -> int:
+        """Dodaje do puli manę ze złotych obwódek (raz na rundę) i zwraca, ile jej było."""
         if self.mana_collected:
             return 0
         gained = self.dice_stats["mana"]
@@ -95,19 +102,28 @@ class Player:
         self.mana_collected = True
         return gained
 
+    def heal(self, amount: int) -> int:
+        """Leczy, ale nie ponad MAX_HP; zwraca, ile faktycznie przybyło."""
+        healed = max(0, min(amount, self.MAX_HP - self.hp))
+        self.hp += healed
+        return healed
+
     def add_bonus(self, stat: str, value: int) -> None:
         self.bonus_stats[stat] = self.bonus_stats.get(stat, 0) + value
 
-    def choose_god(self, god: Optional[God], level: Optional[int]) -> None:
+    def choose_god(self, god: Optional[God], level: Optional[int], choice: Optional[Dict] = None) -> None:
         self.chosen_god = god
         self.chosen_level = level if god else None
+        self.chosen_choice = (choice or {}) if god else {}
 
     def reset_round(self) -> None:
         self.rolled_dice = []
         self.saved_dice = []
         self.chosen_god = None
         self.chosen_level = None
+        self.chosen_choice = {}
         self.bonus_stats = {}
+        self.shield_ignore = 0
         self.rzuty = self.THROWS
         self.mana_collected = False
 
@@ -120,11 +136,13 @@ class Player:
                 "HP": max(self.hp, 0),
                 "Mana": self.mana,
                 "mana_available": self.mana_available,
+                "max_hp": self.MAX_HP,
                 "rzuty": self.rzuty,
                 "rolled_dice": [die.return_data() for die in self.rolled_dice],
                 "saved_dice": [die.return_data() for die in self.saved_dice],
                 "gods": [god.return_data() for god in self.gods],
-                "chosen_god": chosen_god_data}
+                "chosen_god": chosen_god_data,
+                "chosen_choice": self.chosen_choice or None}
 
     def __str__(self) -> str:
         return f"{self.name=}:{self.return_data()}"

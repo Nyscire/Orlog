@@ -4,7 +4,8 @@ from typing import Callable, Dict, Optional
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
-from game import Game, GameError
+from errors import GameError
+from game import Game
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -165,7 +166,9 @@ def handle_confirm_dice(data):
 @socketio.on('choose_god')
 def handle_choose_god(data):
     data = data if isinstance(data, dict) else {}
-    run_action(lambda name: game.choose_god(name, data.get('godName'), data.get('level')))
+    # dodatkowy wybór łaski: ile HP poświęcić (Odyn, Tyr) albo które kości (Frigg, Loki)
+    choice = {key: data[key] for key in ('amount', 'targets') if key in data}
+    run_action(lambda name: game.choose_god(name, data.get('godName'), data.get('level'), choice))
 
 
 @socketio.on('new_game')
