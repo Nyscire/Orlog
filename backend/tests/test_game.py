@@ -620,22 +620,18 @@ class TestGodSelection(unittest.TestCase):
         self.assertEqual([g.name for g in game.players["A"].gods], ["Freyja"])
         self.assertEqual([g.name for g in game.players["B"].gods], ["Thor", "Heimdall"])
 
-    def test_lobby_data_and_leaving(self):
+    def test_leaving_before_start(self):
         game = Game()
         game.register_player("A")
-        lobby = game.lobby_data()
-        self.assertEqual(lobby["players"], ["A"])
-        self.assertEqual(lobby["max_gods"], Game.GODS_PER_PLAYER)
-        self.assertEqual([g["name"] for g in lobby["gods"]], [g.name for g in god_factory()])
         self.assertTrue(game.remove_waiting_player("A"))
-        self.assertEqual(game.lobby_data()["players"], [])
+        self.assertEqual(list(game.players), [])
         game.register_player("A"); game.register_player("B"); game.start()
         self.assertFalse(game.remove_waiting_player("A"))
 
 
 class TestGodData(unittest.TestCase):
     def test_gods_are_described_by_data(self):
-        data = {g["name"]: g for g in Game().lobby_data()["gods"]}
+        data = {g.name: g.return_data() for g in god_factory()}
         self.assertEqual(data["Thor"], {"name": "Thor", "effect": "thor_strike", "values": [2, 5, 8],
                                         "mana_costs": [4, 8, 12], "phase": "after", "needs": None,
                                         "level": None})

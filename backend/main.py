@@ -1,11 +1,18 @@
+"""Serwer gry: wiele stołów, przy każdym osobna partia dla dwóch graczy.
+
+Każdy stół to pokój Socket.IO, więc stan gry trafia tylko do jego graczy.
+Lista stołów (do menu) idzie do wszystkich połączonych.
+"""
 import logging
-from typing import Callable, Dict, Optional
+import threading
+from typing import Callable, Optional
 
 from flask import Flask, request
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from errors import GameError
 from game import Game
+from tables import Seat, TableManager
 
 logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
@@ -13,154 +20,184 @@ log = logging.getLogger(__name__)
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-game = Game()
-# Mapa socket ID → nazwa gracza. Tylko powiązany socket może wykonywać ruchy danego gracza.
-sid_to_player: Dict[str, str] = {}
+manager = TableManager()
+# obsługa zdarzeń i sprzątanie w tle zmieniają te same dane; wysyłamy już po zwolnieniu blokady
+lock = threading.RLock()
+SWEEP_EVERY = 5   # s
+_sweeper_started = False
 
 
-def reset_server() -> None:
-    global game
-    game = Game()
-    sid_to_player.clear()
+def seat_payload(seat: Seat) -> dict:
+    return {"name": seat.name, "token": seat.token, "table": seat.table_id}
 
 
-def is_connected(name: str) -> bool:
-    return name in sid_to_player.values()
+def send_tables(lobby: Optional[dict]) -> None:
+    if lobby is not None:
+        socketio.emit('tables', lobby)
 
 
-def state_payload() -> dict:
-    """Stan gry plus informacja, którzy gracze są teraz połączeni."""
-    data = game.return_data()
-    for player in data["players"]:
-        player["connected"] = is_connected(player["name"])
-    return data
+def send_state(table_id: str, state: Optional[dict]) -> None:
+    if state is not None:
+        socketio.emit('game_state', state, to=table_id)
 
 
-def broadcast_state() -> None:
-    socketio.emit('game_state', state_payload())
-    socketio.emit('lobby', game.lobby_data())
+def sweeper() -> None:
+    """Co kilka sekund usuwa porzucone miejsca i stoły."""
+    while True:
+        socketio.sleep(SWEEP_EVERY)
+        with lock:
+            changed, list_changed = manager.sweep()
+            states = [(t.id, manager.state(t)) for t in changed]
+            lobby = manager.lobby_data() if list_changed or changed else None
+        for table_id, state in states:
+            send_state(table_id, state)
+        send_tables(lobby)
 
 
-def send_error(error: GameError) -> None:
-    # klient dostaje kod i parametry, a tekst wyświetla w języku gracza
-    emit('error_message', error.to_dict())
-    # Przywraca prawdziwy stan po optymistycznej zmianie w interfejsie
-    emit('game_state', state_payload())
-
-
-def run_action(action: Callable[[str], None]) -> None:
-    name: Optional[str] = sid_to_player.get(request.sid)
-    if name is None or name not in game.players:
-        send_error(GameError("join_first"))
-        return
-    try:
-        action(name)
-    except GameError as err:
-        send_error(err)
-        return
-    broadcast_state()
+def start_sweeper() -> None:
+    global _sweeper_started
+    with lock:
+        if _sweeper_started:
+            return
+        _sweeper_started = True
+    socketio.start_background_task(sweeper)
 
 
 @socketio.on('connect')
 def handle_connect(*_):
-    emit('lobby', game.lobby_data())
+    start_sweeper()
+    with lock:
+        lobby = manager.lobby_data()
+    emit('tables', lobby)
 
 
-@socketio.on('get_lobby')
-def handle_get_lobby(*_):
-    emit('lobby', game.lobby_data())
+@socketio.on('get_tables')
+def handle_get_tables(*_):
+    with lock:
+        lobby = manager.lobby_data()
+    emit('tables', lobby)
 
 
-@socketio.on('submit_player_name')
-def handle_submit_player_name(data):
-    # z menu przychodzi {"name": ..., "gods": [...]}; sama nazwa też działa
-    if isinstance(data, dict):
-        name, god_names = data.get('name'), data.get('gods')
-    else:
-        name, god_names = data, None
-    if not isinstance(name, str) or not name.strip():
-        emit('join_rejected', GameError("name_required").to_dict())
+def sit_down(sit: Callable[[], Seat]) -> None:
+    """Wspólna część zakładania stołu i dosiadania się."""
+    with lock:
+        try:
+            seat = sit()
+        except GameError as err:
+            rejected = err.to_dict()
+        else:
+            rejected = None
+            table = manager.tables[seat.table_id]
+            state, lobby = manager.state(table), manager.lobby_data()
+    if rejected:
+        emit('join_rejected', rejected)
         return
-    name = name.strip()
+    log.info("%s siada przy stole %s", seat.name, seat.table_id)
+    join_room(seat.table_id)
+    emit('seated', seat_payload(seat))
+    send_state(seat.table_id, state)
+    send_tables(lobby)
 
-    bound_name = sid_to_player.get(request.sid)
-    if bound_name is not None and bound_name != name:
-        emit('join_rejected', GameError("already_playing_as", name=bound_name).to_dict())
+
+@socketio.on('create_table')
+def handle_create_table(data):
+    data = data if isinstance(data, dict) else {}
+    sit_down(lambda: manager.create_table(request.sid, data.get('name'), data.get('gods'), data.get('table_name')))
+
+
+@socketio.on('join_table')
+def handle_join_table(data):
+    data = data if isinstance(data, dict) else {}
+    sit_down(lambda: manager.join_table(request.sid, data.get('table'), data.get('name'), data.get('gods')))
+
+
+@socketio.on('resume')
+def handle_resume(data):
+    """Powrót na swoje miejsce po odświeżeniu strony albo zerwanym połączeniu."""
+    data = data if isinstance(data, dict) else {}
+    with lock:
+        try:
+            seat, previous = manager.resume(request.sid, data.get('name'), data.get('token'))
+        except GameError as err:
+            failed = err.to_dict()
+        else:
+            failed = None
+            table = manager.tables[seat.table_id]
+            state, lobby = manager.state(table), manager.lobby_data()
+    if failed:
+        emit('resume_failed', failed)
         return
+    if previous:
+        # gracz otworzył grę w nowej karcie: stara traci miejsce
+        leave_room(seat.table_id, sid=previous)
+        socketio.emit('seat_lost', {"code": "seat_taken_over", "params": {}}, to=previous)
+    log.info("%s wraca do stołu %s", seat.name, seat.table_id)
+    join_room(seat.table_id)
+    emit('seated', seat_payload(seat))
+    send_state(seat.table_id, state)
+    send_tables(lobby)
 
-    # Powrót gracza po odświeżeniu strony lub zerwanym połączeniu
-    if name in game.players:
-        if is_connected(name) and bound_name != name:
-            emit('join_rejected', GameError("name_taken").to_dict())
+
+@socketio.on('leave_table')
+def handle_leave_table(*_):
+    """Gracz wstaje od stołu. Przeciwnik zostaje i czeka na nowego rywala."""
+    with lock:
+        seat = manager.seat_of(request.sid)
+        if seat is None:
             return
-        sid_to_player[request.sid] = name
-        log.info("Gracz wrócił do gry: %s", name)
-        broadcast_state()  # drugi gracz od razu widzi, że przeciwnik wrócił
-        return
-
-    # Porzucona gra (żaden z jej graczy nie jest połączony) ustępuje miejsca nowej
-    if game.is_full and not any(is_connected(n) for n in game.players):
-        log.info("Poprzednia gra porzucona, zaczynamy nową")
-        reset_server()
-
-    try:
-        game.register_player(name, god_names)
-    except GameError as err:
-        emit('join_rejected', err.to_dict())
-        return
-    sid_to_player[request.sid] = name
-    log.info("Gracz dołączył: %s", name)
-
-    if game.can_start:
-        game.start()
-        log.info("Wszyscy gracze gotowi — startujemy grę!")
-    broadcast_state()
+        table_id = seat.table_id
+        table, name = manager.leave(request.sid)
+        state = manager.state(table) if table else None
+        lobby = manager.lobby_data()
+    log.info("%s wstaje od stołu %s", name, table_id)
+    leave_room(table_id)
+    send_state(table_id, state)
+    send_tables(lobby)
 
 
 @socketio.on('disconnect')
 def handle_disconnect(*_):
-    name = sid_to_player.pop(request.sid, None)
-    if name is None:
-        return
-    log.info("Gracz rozłączony: %s", name)
-    if is_connected(name) or name not in game.players:
-        return
-    # W lobby zwalniamy miejsce, żeby nowa osoba nie czekała na kogoś, kto wyszedł.
-    # W trakcie gry miejsce zostaje, a przeciwnik dostaje informację, że gracz jest offline.
-    game.remove_waiting_player(name)
-    broadcast_state()
+    with lock:
+        table = manager.disconnect(request.sid)
+        state = manager.state(table) if table else None
+        lobby = manager.lobby_data() if table else None
+    if table:
+        log.info("Rozłączenie przy stole %s", table.id)
+        send_state(table.id, state)   # przeciwnik widzi, że gracz jest offline
+        send_tables(lobby)            # czekający stół znika z listy, dopóki gracz nie wróci
 
 
-@socketio.on('leave_lobby')
-def handle_leave_lobby(*_):
-    name = sid_to_player.get(request.sid)
-    if name is not None and game.remove_waiting_player(name):
-        sid_to_player.pop(request.sid, None)
-        log.info("Gracz wyszedł z lobby: %s", name)
-        broadcast_state()
-
-
-@socketio.on('leave_game')
-def handle_leave_game(*_):
-    """Gracz kończy partię: obaj wracają do menu, a serwer jest wolny na nową grę."""
-    name = sid_to_player.get(request.sid)
-    if name is None or name not in game.players:
+def run_action(action: Callable[[Game, str], None]) -> None:
+    """Ruch w grze przy stole, przy którym siedzi gracz z tego połączenia."""
+    with lock:
+        found = manager.table_of(request.sid)
+        if found is None:
+            error, state = GameError("join_first"), None
+        else:
+            table, name = found
+            before = (table.stage, table.game.round)
+            try:
+                action(table.game, name)
+                error = None
+            except GameError as err:
+                error = err
+            state = manager.state(table)
+            # lista stołów pokazuje fazę i rundę, więc odświeżamy ją tylko przy ich zmianie
+            lobby = manager.lobby_data() if (table.stage, table.game.round) != before else None
+    if error:
+        # klient dostaje kod i parametry, a tekst wyświetla w języku gracza
+        emit('error_message', error.to_dict())
+        if state is not None:
+            emit('game_state', state)   # przywraca prawdziwy stan po optymistycznej zmianie
         return
-    if game.stage == "waiting":
-        handle_leave_lobby()
-        return
-    log.info("Gracz zakończył partię: %s", name)
-    others = [sid for sid, player in sid_to_player.items() if player != name]
-    for sid in others:
-        socketio.emit('game_ended', {"code": "player_left", "params": {"name": name}}, to=sid)
-    reset_server()
-    broadcast_state()
+    send_state(table.id, state)
+    send_tables(lobby)
 
 
 @socketio.on('confirm_dice')
 def handle_confirm_dice(data):
     selected = data.get('selectedIndexes') if isinstance(data, dict) else None
-    run_action(lambda name: game.confirm_dice(name, selected))
+    run_action(lambda game, name: game.confirm_dice(name, selected))
 
 
 @socketio.on('choose_god')
@@ -168,12 +205,12 @@ def handle_choose_god(data):
     data = data if isinstance(data, dict) else {}
     # dodatkowy wybór łaski: ile HP poświęcić (Odyn, Tyr) albo które kości (Frigg, Loki)
     choice = {key: data[key] for key in ('amount', 'targets') if key in data}
-    run_action(lambda name: game.choose_god(name, data.get('godName'), data.get('level'), choice))
+    run_action(lambda game, name: game.choose_god(name, data.get('godName'), data.get('level'), choice))
 
 
 @socketio.on('new_game')
 def handle_new_game(*_):
-    run_action(lambda name: game.rematch())
+    run_action(lambda game, name: game.rematch())
 
 
 if __name__ == '__main__':
