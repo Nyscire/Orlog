@@ -20,7 +20,7 @@
         </li>
         <li>
           <span class="tile gold"><img src="/img/icons/axe.svg" alt="" /><i class="coin"></i></span>
-          <span class="legend-text"><strong>{{ $t('dice.manaBorderName') }}</strong> {{ $t('dice.manaBorderLegend') }}</span>
+          <span class="legend-text"><strong>{{ $t('dice.coinName') }}</strong> {{ $t('dice.coinLegend') }}</span>
         </li>
       </ul>
 

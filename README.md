@@ -85,7 +85,7 @@ W aplikacji wpisuje się wtedy adres serwera, np. `1.2.3.4` albo `http://1.2.3.4
 
 - Przed grą każdy wpisuje imię, wybiera do 3 z 20 bogów, a potem zakłada stół albo dosiada się do wolnego stołu z listy. Partia zaczyna się, gdy przy stole siedzi dwóch graczy.
 - Gracze na zmianę rzucają kośćmi i odkładają te, które chcą zatrzymać. Każdy ma 3 rzuty, w ostatnim zostają wszystkie kości.
-- Po rzutach liczy się mana: każda kość ze złotą obwódką daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę (jeśli ją ma).
+- Po rzutach liczy się mana: każda kość z monetą w rogu daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę (jeśli ją ma).
 - Potem każdy wybiera łaskę boga (albo ją pomija). Frigg i Loki wskazują kości na stole, a Odyn i Tyr ile HP poświęcić.
 - Walka: najpierw łaski „przed walką” (zmiany kości), potem atakuje gracz kierujący, po nim drugi, a na końcu łaski „po walce” (obrażenia, leczenie, mana). Tarcze blokują strzały, hełmy blokują topory. Kradzież Thryma działa jeszcze przed zapłatą za łaskę przeciwnika i obniża jej poziom.
 - W kolejnej rundzie kieruje drugi gracz. Gra kończy się, gdy ktoś spadnie do 0 HP, i można od razu zagrać rewanż.
