@@ -330,13 +330,6 @@ class Game:
 
     # ---------- stan dla klientów ----------
 
-    def lobby_data(self) -> Dict[str, object]:
-        """Dane do menu startowego: dostępni bogowie i kto już jest w grze."""
-        return {"gods": [god.return_data() for god in god_factory()],
-                "max_gods": self.GODS_PER_PLAYER,
-                "players": list(self.players),
-                "stage": self.stage}
-
     def return_data(self) -> Dict[str, str | int | List | None]:
         return {"players": [player.return_data() for player in self.players.values()],
                 "active_player": self.active_player,

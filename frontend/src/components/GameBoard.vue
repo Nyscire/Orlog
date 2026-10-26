@@ -4,13 +4,15 @@
       v-if="!inGame"
       :lobby="lobby"
       :connected="connected"
-      :joined="!!playerName"
+      :seated="!!seat"
       :player-name="playerName"
-      :chosen-gods="chosenGods"
+      :table="data.table || null"
+      :my-gods="myGodNames"
       :error="errorText(joinError)"
-      :notice="errorText(notice)"
-      @join="join"
-      @leave="leaveLobby"
+      :notice="errorText(notice || data.notice)"
+      @create-table="createTable"
+      @join-table="joinTable"
+      @leave="leaveTable"
       @help="showHelp = true"
       @settings="showSettings = true"
     />
@@ -28,7 +30,7 @@
       </div>
       <div v-else-if="opponentOffline" class="status-banner">
         <span><strong>{{ opponent.name }}</strong> {{ $t('board.opponentOffline') }}</span>
-        <button class="btn btn-gold banner-btn" @click="leaveGame">{{ $t('board.endGame') }}</button>
+        <button class="btn btn-gold banner-btn" @click="leaveTable">{{ $t('board.endGame') }}</button>
       </div>
 
       <!-- Opponent Section - Fixed at top -->
@@ -45,6 +47,7 @@
           :active-player="data.active_player"
           :winner="data.winner"
           :round="data.round"
+          :table="data.table || null"
           :log="data.log || []"
           :opponent="opponent"
           :player="player"
@@ -53,7 +56,7 @@
           @new-game="newGame"
           @help="showHelp = true"
           @settings="showSettings = true"
-          @leave="leaveGame"
+          @leave="leaveTable"
         />
       </div>
 
@@ -86,6 +89,27 @@ import StartMenu from './StartMenu.vue';
 import HelpDialog from './HelpDialog.vue';
 import SettingsDialog from './SettingsDialog.vue';
 import { errorText } from '../i18n';
+
+// miejsce przy stole: { name, token }, żeby po odświeżeniu strony wrócić do gry
+const SESSION_KEY = 'orlog.session';
+
+function loadSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null');
+    return saved && typeof saved.name === 'string' && typeof saved.token === 'string' ? saved : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveSession(session) {
+  try {
+    if (session) localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    else localStorage.removeItem(SESSION_KEY);
+  } catch (e) {
+    // bez localStorage po odświeżeniu trzeba usiąść przy stole od nowa
+  }
+}
 import OpponentSection from './OpponentSection.vue';
 import NeutralZone from './NeutralZone.vue';
 import PlayerSection from './PlayerSection.vue';
@@ -102,7 +126,8 @@ export default {
   data() {
     return {
       playerName: '',
-      chosenGods: [],
+      // { name, token, table } od serwera po zajęciu miejsca
+      seat: null,
       data: {},
       lobby: null,
       connected: socket.connected,
@@ -118,9 +143,12 @@ export default {
     }
   },
   computed: {
-    // menu startowe znika dopiero, gdy obaj gracze są w grze
+    // menu znika dopiero, gdy przy stole siedzi dwóch graczy
     inGame() {
-      return !!this.playerName && !!this.data.stage && this.data.stage !== 'waiting'
+      return !!this.seat && !!this.data.stage && this.data.stage !== 'waiting'
+    },
+    myGodNames() {
+      return (this.player.gods || []).map(g => g.name)
     },
     opponentOffline() {
       return this.opponent.connected === false
@@ -153,37 +181,46 @@ export default {
   mounted() {
     socket.on('connect', () => {
       this.connected = true;
-      // po reconnecie socket ma nowe ID, więc dołączamy jeszcze raz z tą samą nazwą
-      if (this.playerName) {
-        socket.emit('submit_player_name', { name: this.playerName, gods: this.chosenGods });
-      }
+      // po odświeżeniu strony albo zerwanym połączeniu wracamy na swoje miejsce
+      const session = loadSession();
+      if (session) socket.emit('resume', session);
     });
 
     socket.on('disconnect', () => {
       this.connected = false;
     });
 
-    socket.on('lobby', (lobby) => {
+    socket.on('tables', (lobby) => {
       this.lobby = lobby;
     });
 
-    // połączenie mogło się zestawić, zanim komponent się zamontował
-    if (socket.connected) {
-      socket.emit('get_lobby');
-    }
+    socket.on('seated', (seat) => {
+      this.seat = seat;
+      this.playerName = seat.name;
+      this.joinError = '';
+      this.notice = '';
+      saveSession({ name: seat.name, token: seat.token });
+    });
 
     socket.on('game_state', (data) => {
+      // spóźniony stan stołu, od którego gracz już wstał
+      if (!this.seat || data.table?.id !== this.seat.table) return;
       this.data = data
     });
 
     socket.on('join_rejected', (message) => {
-      this.playerName = '';
-      this.data = {};
       this.joinError = message;
     });
 
-    // przeciwnik zakończył partię: wracamy do menu z informacją
-    socket.on('game_ended', (message) => {
+    // miejsce wygasło (np. długo zamknięta karta): zostaje lista stołów
+    socket.on('resume_failed', (message) => {
+      saveSession(null);
+      this.resetToMenu();
+      this.notice = message;
+    });
+
+    // gra otwarta w innej karcie przejęła miejsce; sesji nie kasujemy, bo należy do tamtej karty
+    socket.on('seat_lost', (message) => {
       this.resetToMenu();
       this.notice = message;
     });
@@ -192,15 +229,19 @@ export default {
       this.selectedDiceIndexes = [];
       this.showError(message);
     });
+
+    // połączenie mogło się zestawić, zanim komponent się zamontował
+    if (socket.connected) {
+      const session = loadSession();
+      if (session) socket.emit('resume', session);
+      else socket.emit('get_tables');
+    }
   },
   beforeUnmount() {
-    socket.off('connect');
-    socket.off('disconnect');
-    socket.off('lobby');
-    socket.off('game_state');
-    socket.off('join_rejected');
-    socket.off('game_ended');
-    socket.off('error_message');
+    for (const event of ['connect', 'disconnect', 'tables', 'seated', 'game_state', 'join_rejected',
+      'resume_failed', 'seat_lost', 'error_message']) {
+      socket.off(event);
+    }
     clearTimeout(this.errorTimer);
   },
   methods: {
@@ -208,23 +249,22 @@ export default {
     errorText(error) {
       return errorText(error);
     },
-    join({ name, gods }) {
+    createTable({ name, gods, tableName }) {
       this.joinError = '';
-      this.notice = '';
-      this.playerName = name;
-      this.chosenGods = gods;
-      socket.emit('submit_player_name', { name, gods });
+      socket.emit('create_table', { name, gods, table_name: tableName });
     },
-    leaveLobby() {
-      socket.emit('leave_lobby');
-      this.resetToMenu();
+    joinTable({ name, gods, table }) {
+      this.joinError = '';
+      socket.emit('join_table', { name, gods, table });
     },
-    leaveGame() {
-      socket.emit('leave_game');
+    leaveTable() {
+      socket.emit('leave_table');
+      saveSession(null);
       this.resetToMenu();
     },
     resetToMenu() {
       this.playerName = '';
+      this.seat = null;
       this.data = {};
       this.selectedDiceIndexes = [];
       this.pick = null;

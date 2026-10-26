@@ -169,33 +169,42 @@ export const en = {
     yourName: 'Your name',
     namePlaceholder: 'e.g. Eivor',
     godsLabel: 'Gods you take into the game',
-    godsHint: 'You can buy their favors with mana during the game.',
     loadingGods: 'Loading gods from the server…',
     costs: 'Mana: {costs}',
-    join: 'Join the game',
-    playWith: 'Play with: {names}',
-    gameInProgress: 'A game is in progress: {players}. If that is you, enter the same name to rejoin.',
-    and: ' and ',
     waitingTitle: 'Waiting for the second player',
     playingAs: 'Playing as',
     withGods: 'gods: {gods}.',
-    waitingHint: 'The other player opens the same page and enters their name.',
-    changeChoice: 'Change name or gods',
+    waitingHint: 'The other player picks this table from the list in the menu and clicks "Take a seat".',
     howToPlay: 'How to play?',
     settings: 'Settings',
     status: {
       offline: 'No connection to the server. Check that the backend is running (python main.py).',
       joined: 'Connected to the server',
-      inProgress: 'Connected · a game is in progress on the server',
-      waiting: 'Connected · waiting for an opponent: {names}',
-      empty: 'Connected · nobody is waiting yet'
+      online: 'Connected · {tables}'
     }
+  },
+
+  lobby: {
+    title: 'Tables',
+    count: ({ n }) => `${n} ${n === 1 ? 'table' : 'tables'}`,
+    namePlaceholder: 'Table name (optional)',
+    create: 'Open a table',
+    join: 'Take a seat',
+    busy: 'Playing',
+    empty: 'There are no tables yet. Open the first one and the other player will pick it from the list.',
+    defaultName: "{host}'s table",
+    waitingFor: '{name} is waiting',
+    playing: '{players} · round {round}',
+    finished: '{players} · game over',
+    needSetup: 'Enter your name and choose gods to take a seat.',
+    full: 'The server already has the maximum of {max} tables. Take a seat at one from the list.',
+    leave: 'Leave the table'
   },
 
   board: {
     selfOffline: 'Lost connection to the server. Reconnecting…',
-    opponentOffline: 'is offline. The game will wait until they come back with the same name. You can also end the game.',
-    endGame: 'End the game'
+    opponentOffline: 'is offline. The game will wait until they come back. You can also leave the table.',
+    endGame: 'Leave the table'
   },
 
   stage: {
@@ -213,9 +222,10 @@ export const en = {
     turnOf: 'Turn:',
     howToPlay: 'How to play?',
     settings: 'Settings',
-    leave: 'Leave game',
-    leaveConfirm: 'End the game for both players?',
+    leave: 'Leave table',
+    leaveConfirm: 'Leave the table? The game will end.',
     leaveYes: 'Yes, leave',
+    tableCode: 'Table code: {code}',
     no: 'No',
     yourSaved: 'Your kept dice',
     opponentSaved: "Opponent's kept dice",
@@ -427,8 +437,15 @@ export const en = {
     invalid_targets: 'Invalid dice choice for the favor.',
     targets_count: 'Pick between 1 and {max} dice.',
     join_first: 'Join the game first.',
-    already_playing_as: 'You are already playing as {name}.',
-    player_left: '{name} ended the game. You can start a new one.',
+    already_seated: 'You already have a seat as {name}.',
+    player_left: '{name} left the table. Wait for a new opponent or go back to the table list.',
+    table_not_found: 'This table is gone or its host is offline.',
+    table_full: 'There is no free seat at this table.',
+    too_many_tables: 'The server already has {max} tables. Take a seat at one from the list.',
+    table_name_too_long: 'The table name can have at most {max} characters.',
+    invalid_table_name: 'Invalid table name.',
+    seat_not_found: 'Your seat has expired. Pick a table from the list.',
+    seat_taken_over: 'You are now playing in another tab or window.',
     unknown: 'Something went wrong ({code}).'
   }
 }
