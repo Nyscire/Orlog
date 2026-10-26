@@ -1,0 +1,121 @@
+# Testy serwera, obraz Dockera i instalatory aplikacji (Windows, Linux).
+# Przy tagu v* (np. v1.0.0) powstaje szkic wydania z instalatorami w zakładce Releases.
+name: Budowanie
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Serwer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Zależności
+        run: pip install -r backend/requirements.txt
+
+      - name: Testy
+        working-directory: backend
+        run: python -m unittest discover -s tests -t .
+
+      - name: Obraz Dockera
+        run: docker build -t orlog-server backend
+
+      - name: Serwer w kontenerze odpowiada
+        run: |
+          docker run -d --name orlog -p 5000:5000 orlog-server
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:5000/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs orlog
+          exit 1
+
+  app:
+    name: Aplikacja (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: frontend
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Zależności
+        run: npm ci --no-audit --no-fund
+
+      - name: Frontend
+        run: npm run build
+        env:
+          # adres serwera wbudowany w aplikację: zmienna repozytorium ORLOG_SERVER_URL
+          # (Settings → Secrets and variables → Actions → Variables); bez niej gracz wpisuje adres sam
+          VITE_BACKEND_URL: ${{ vars.ORLOG_SERVER_URL }}
+
+      - name: Instalatory
+        run: npx electron-builder --publish never
+
+      - name: Test uruchomienia (Linux)
+        if: runner.os == 'Linux'
+        run: xvfb-run -a release/linux-unpacked/orlog --no-sandbox --disable-gpu --smoke-test=smoke-linux.png
+
+      - name: Test uruchomienia (Windows)
+        if: runner.os == 'Windows'
+        run: release/win-unpacked/Orlog.exe --disable-gpu --smoke-test=smoke-windows.png
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orlog-${{ runner.os }}
+          if-no-files-found: error
+          path: |
+            frontend/release/*.AppImage
+            frontend/release/*.deb
+            frontend/release/*.exe
+
+      # zrzut ekranu z testu uruchomienia, osobno, żeby nie pobierać całych instalatorów
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zrzut-${{ runner.os }}
+          if-no-files-found: error
+          path: frontend/smoke-*.png
+
+  release:
+    name: Wydanie
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [server, app]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Szkic wydania z instalatorami
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --generate-notes \
+            --title "Orlog ${GITHUB_REF_NAME#v}" \
+            artifacts/*/*.AppImage artifacts/*/*.deb artifacts/*/*.exe
