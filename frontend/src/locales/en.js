@@ -101,7 +101,7 @@ const FAVORS = {
     level: x => `+${count(x, DICE)}`,
     log: p => {
       let text = `extra dice: ${faceList(p.faces)}.`
-      if (p.mana) text += ` Gold borders: +${p.mana} mana.`
+      if (p.mana) text += ` Coins: +${p.mana} mana.`
       if (p.stolen) text += ` Hands steal ${MANA(p.stolen)}.`
       return text
     }
@@ -266,7 +266,7 @@ export const en = {
     hp: 'HP',
     hpTitle: 'Health: {hp} of {max}. Whoever drops to zero loses.',
     mana: 'Mana',
-    manaTitle: 'Mana: used to buy god favors. After the dice phase gold borders give mana and hands steal it from the opponent.',
+    manaTitle: 'Mana: used to buy god favors. After the dice phase dice with a coin give mana and hands steal it from the opponent.',
     fromDice: '+{n} from dice'
   },
 
@@ -280,9 +280,9 @@ export const en = {
     helmet: { name: 'Helmet', desc: 'Defence: blocks 1 opponent axe.' },
     shield: { name: 'Shield', desc: 'Defence: blocks 1 opponent arrow.' },
     hand: { name: 'Hand', desc: 'Steals 1 mana from the opponent, if they have any.' },
-    manaBorder: 'Gold border: this die gives 1 mana.',
-    manaBorderName: 'Gold border',
-    manaBorderLegend: 'The die gives 1 mana, whatever its symbol.',
+    coin: 'Coin in the corner: this die gives 1 mana.',
+    coinName: 'Coin in the corner',
+    coinLegend: 'A die with a coin gives 1 mana, whatever its symbol.',
     extraMana: 'gives 1 mana',
     // "2 axes, 1 arrow · 1 helmet · 2 hands · +3 mana"
     summary: dice => {
@@ -337,10 +337,10 @@ export const en = {
       dice_summary: p => {
         const parts = ['axe', 'arrow', 'helmet', 'shield', 'hand'].filter(f => p.counts?.[f]).map(f => count(p.counts[f], FACES[f]))
         let text = `${p.player}: ${parts.length ? parts.join(', ') : 'no weapons or defence'}.`
-        if (p.mana) text += ` Gold borders: ${p.mana}.`
+        if (p.mana) text += ` Dice with a coin: ${p.mana}.`
         return text
       },
-      mana_collected: p => `Mana from gold borders goes to the pool: ${p.gains.map(g => `${g.player} +${g.gained} (total ${g.total})`).join(', ')}.`,
+      mana_collected: p => `Mana from coins goes to the pool: ${p.gains.map(g => `${g.player} +${g.gained} (total ${g.total})`).join(', ')}.`,
       mana_stolen: p => (p.amount
         ? `${p.thief} steals ${MANA(p.amount)} (${count(p.hands, FACES.hand)}). Mana: ${p.thief} ${p.thief_total}, ${p.victim} ${p.victim_total}.`
         : `${p.thief}: ${count(p.hands, FACES.hand)} but nothing to steal, ${p.victim} has no mana.`),
@@ -377,7 +377,7 @@ export const en = {
     roundTitle: 'How a round works',
     steps: [
       { title: 'Rolling dice.', text: 'Players take turns rolling six dice. After each roll you mark the dice you want to keep and reroll the rest. You get 3 rolls, and on the last one all dice are kept.' },
-      { title: 'Mana.', text: 'Each gold border gives 1 mana, and each hand steals 1 mana from the opponent if they have any.' },
+      { title: 'Mana.', text: 'Each die with a coin in the corner gives 1 mana, and each hand steals 1 mana from the opponent if they have any.' },
       { title: 'God favors.', text: 'Each player can buy a favor from one of their gods or skip it. A higher level costs more and gives a stronger effect.' },
       { title: 'Battle.', text: 'First the "before battle" favors take effect, then the player who started the round attacks, followed by the other player, and finally the "after battle" favors. The other player starts the next round.' }
     ],

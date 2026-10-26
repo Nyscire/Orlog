@@ -118,7 +118,7 @@ const FAVORS = {
     level: x => `+${count(x, DICE)}`,
     log: p => {
       let text = `dodatkowe kości: ${faceList(p.faces)}.`
-      if (p.mana) text += ` Mana z obwódek: +${p.mana}.`
+      if (p.mana) text += ` Mana z monet: +${p.mana}.`
       if (p.stolen) text += ` Ręce kradną ${MANA(p.stolen)}.`
       return text
     }
@@ -284,7 +284,7 @@ export const pl = {
     hp: 'HP',
     hpTitle: 'Życie: {hp} z {max}. Kto spadnie do zera, przegrywa.',
     mana: 'Mana',
-    manaTitle: 'Mana: za nią kupujesz łaski bogów. Po fazie rzutów złote obwódki dają manę, a ręce kradną ją przeciwnikowi.',
+    manaTitle: 'Mana: za nią kupujesz łaski bogów. Po fazie rzutów kości z monetą dają manę, a ręce kradną ją przeciwnikowi.',
     fromDice: '+{n} z kości'
   },
 
@@ -298,9 +298,9 @@ export const pl = {
     helmet: { name: 'Hełm', desc: 'Obrona: blokuje 1 topór przeciwnika.' },
     shield: { name: 'Tarcza', desc: 'Obrona: blokuje 1 strzałę przeciwnika.' },
     hand: { name: 'Ręka', desc: 'Kradnie przeciwnikowi 1 manę, jeśli ją ma.' },
-    manaBorder: 'Złota obwódka: kość daje 1 manę.',
-    manaBorderName: 'Złota obwódka',
-    manaBorderLegend: 'Kość daje 1 manę, niezależnie od symbolu.',
+    coin: 'Moneta w rogu: kość daje 1 manę.',
+    coinName: 'Moneta w rogu',
+    coinLegend: 'Kość z monetą daje 1 manę, niezależnie od symbolu.',
     extraMana: 'daje 1 manę',
     // "2 topory, 1 strzała · 1 hełm · 2 ręce · +3 many"
     summary: dice => {
@@ -356,10 +356,10 @@ export const pl = {
       dice_summary: p => {
         const parts = ['axe', 'arrow', 'helmet', 'shield', 'hand'].filter(f => p.counts?.[f]).map(f => count(p.counts[f], FACES[f]))
         let text = `${p.player}: ${parts.length ? parts.join(', ') : 'bez broni i obrony'}.`
-        if (p.mana) text += ` Złote obwódki: ${p.mana}.`
+        if (p.mana) text += ` Kości z monetą: ${p.mana}.`
         return text
       },
-      mana_collected: p => `Mana z obwódek trafia do puli: ${p.gains.map(g => `${g.player} +${g.gained} (razem ${g.total})`).join(', ')}.`,
+      mana_collected: p => `Mana z monet trafia do puli: ${p.gains.map(g => `${g.player} +${g.gained} (razem ${g.total})`).join(', ')}.`,
       mana_stolen: p => (p.amount
         ? `${p.thief} kradnie ${MANA(p.amount)} (${count(p.hands, FACES.hand)}). Mana: ${p.thief} ${p.thief_total}, ${p.victim} ${p.victim_total}.`
         : `${p.thief}: ${count(p.hands, FACES.hand)} bez łupu, ${p.victim} nie ma many.`),
@@ -396,7 +396,7 @@ export const pl = {
     roundTitle: 'Przebieg rundy',
     steps: [
       { title: 'Rzuty kośćmi.', text: 'Gracze rzucają na zmianę sześcioma kośćmi. Po każdym rzucie zaznaczasz kości, które chcesz zatrzymać, a resztę rzucasz ponownie. Masz 3 rzuty, w ostatnim zostają wszystkie kości.' },
-      { title: 'Mana.', text: 'Każda złota obwódka daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę, jeśli ją ma.' },
+      { title: 'Mana.', text: 'Każda kość z monetą w rogu daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę, jeśli ją ma.' },
       { title: 'Łaski bogów.', text: 'Każdy może kupić łaskę jednego ze swoich bogów albo ją pominąć. Wyższy poziom kosztuje więcej i daje silniejszy efekt.' },
       { title: 'Walka.', text: 'Najpierw działają łaski „przed walką”, potem atakuje gracz, który zaczynał rundę, i po nim drugi, a na końcu łaski „po walce”. W następnej rundzie zaczyna drugi gracz.' }
     ],

@@ -21,11 +21,16 @@
 
     <!-- podpowiedź jest poza .die-content, żeby nie ucinało jej zaokrąglenie kafelka -->
     <transition name="tooltip-fade">
-      <div v-if="showTooltip" class="die-tooltip" :class="`place-${tooltipPlacement}`">
+      <div
+        v-if="showTooltip"
+        class="die-tooltip"
+        :class="`place-${tooltipPlacement}`"
+        :style="{ '--shift': tooltipOffset + 'px' }"
+      >
         <div class="tooltip-content">
           <strong>{{ info.name }}</strong>
           <div class="tooltip-desc">{{ info.desc }}</div>
-          <div v-if="die.gives_mana" class="tooltip-mana">{{ manaBorderDesc }}</div>
+          <div v-if="die.gives_mana" class="tooltip-mana">{{ coinDesc }}</div>
         </div>
       </div>
     </transition>
@@ -35,6 +40,8 @@
 </template>
 
 <script>
+import { tooltipShift } from '../dice'
+
 export default {
   name: 'Die',
   props: {
@@ -57,6 +64,8 @@ export default {
   data() {
     return {
       showTooltip: false,
+      // przesunięcie dymka, żeby przy skrajnej kości nie wychodził poza okno
+      tooltipOffset: 0,
       ripple: false,
       rippleStyle: {}
     }
@@ -66,8 +75,8 @@ export default {
       const info = this.$t(`dice.${this.die.stat}`)
       return typeof info === 'object' ? info : { name: this.die.stat, desc: '' }
     },
-    manaBorderDesc() {
-      return this.$t('dice.manaBorder')
+    coinDesc() {
+      return this.$t('dice.coin')
     },
     ariaLabel() {
       return this.info.name + (this.die.gives_mana ? `, ${this.$t('dice.extraMana')}` : '')
@@ -90,6 +99,7 @@ export default {
     },
     
     handleHover() {
+      this.tooltipOffset = tooltipShift(this.$el.getBoundingClientRect(), document.documentElement.clientWidth)
       this.showTooltip = true
     },
     
@@ -210,7 +220,7 @@ export default {
   font-weight: bold;
 }
 
-/* kość dająca manę: złota obwódka i złota moneta w rogu */
+/* kość dająca manę: moneta w rogu i obwódka w kolorze akcentu motywu */
 .die.mana {
   border: 2px solid var(--gold);
 }
@@ -232,7 +242,8 @@ export default {
   position: absolute;
   bottom: 100%;
   left: 50%;
-  transform: translateX(-50%);
+  /* --shift ustawia handleHover, gdy dymek wychodziłby poza okno */
+  transform: translateX(calc(-50% + var(--shift, 0px)));
   margin-bottom: 8px;
   z-index: 30;
   pointer-events: none;
@@ -273,7 +284,7 @@ export default {
 .tooltip-fade-enter-from,
 .tooltip-fade-leave-to {
   opacity: 0;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(calc(-50% + var(--shift, 0px))) translateY(4px);
 }
 
 /* Ripple effect */
