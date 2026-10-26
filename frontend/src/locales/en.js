@@ -179,6 +179,8 @@ export const en = {
     settings: 'Settings',
     status: {
       offline: 'No connection to the server. Check that the backend is running (python main.py).',
+      offlineApp: 'No connection to the server {server}. You can change the address in the settings.',
+      noServer: 'Enter the game server address in the settings.',
       joined: 'Connected to the server',
       online: 'Connected · {tables}'
     }
@@ -394,6 +396,15 @@ export const en = {
     font: 'Font',
     size: 'Text size',
     done: 'Done',
+    server: 'Game server',
+    serverPlaceholder: 'e.g. 192.168.0.10 or https://orlog.example.com',
+    serverConnect: 'Connect',
+    serverCurrent: 'Current: {url}.',
+    serverMissing: 'Enter the address of the server the game should connect to.',
+    serverFormat: 'Without a port number the game connects to port 5000.',
+    serverInvalid: 'This does not look like a server address.',
+    serverReset: 'Restore default',
+    version: 'Orlog {version}',
     sample: 'Axe, arrow and shield',
     themes: {
       classic: 'Wood and gold',

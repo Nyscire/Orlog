@@ -1,13 +1,12 @@
 // src/socket.js
 import { io } from 'socket.io-client';
+import { serverUrl } from './server';
 
-// Adres backendu Flask. Domyślnie ten sam host co strona, port 5000,
-// więc gra działa też w sieci lokalnej (np. http://192.168.0.10:5173).
-// Można go nadpisać zmienną VITE_BACKEND_URL w pliku .env.local.
-const backendUrl =
-  import.meta.env.VITE_BACKEND_URL ||
-  `${window.location.protocol}//${window.location.hostname}:5000`;
+// Adres serwera wybiera server.js (ustawienia, VITE_BACKEND_URL albo host strony).
+// Zmiana adresu w ustawieniach przeładowuje okno, więc tu wystarczy jedno połączenie.
+export const currentServer = serverUrl();
 
-const socket = io(backendUrl);
+// bez adresu (aplikacja bez wbudowanego serwera) nie łączymy się, dopóki gracz go nie poda
+const socket = currentServer ? io(currentServer) : io({ autoConnect: false });
 
 export default socket;

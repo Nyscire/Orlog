@@ -79,7 +79,7 @@
     </div>
 
     <HelpDialog v-if="showHelp" @close="showHelp = false" />
-    <SettingsDialog v-if="showSettings" @close="showSettings = false" />
+    <SettingsDialog v-if="showSettings" :focus-server="!hasServer" @close="showSettings = false" />
   </div>
 </template>
 
@@ -89,6 +89,7 @@ import StartMenu from './StartMenu.vue';
 import HelpDialog from './HelpDialog.vue';
 import SettingsDialog from './SettingsDialog.vue';
 import { errorText } from '../i18n';
+import { isApp, serverUrl } from '../server';
 
 // miejsce przy stole: { name, token }, żeby po odświeżeniu strony wrócić do gry
 const SESSION_KEY = 'orlog.session';
@@ -139,7 +140,8 @@ export default {
       joinError: '',
       notice: '',
       errorMessage: '',
-      errorTimer: null
+      errorTimer: null,
+      hasServer: !!serverUrl()
     }
   },
   computed: {
@@ -229,6 +231,9 @@ export default {
       this.selectedDiceIndexes = [];
       this.showError(message);
     });
+
+    // pierwsze uruchomienie aplikacji bez wbudowanego adresu: od razu ustawienia z polem serwera
+    if (isApp && !this.hasServer) this.showSettings = true;
 
     // połączenie mogło się zestawić, zanim komponent się zamontował
     if (socket.connected) {

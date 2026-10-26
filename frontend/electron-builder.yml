@@ -1,0 +1,39 @@
+# Instalatory aplikacji: npm run dist (system, na którym budujesz),
+# npm run dist:linux, npm run dist:win. Wyniki trafiają do release/.
+appId: com.nyscire.orlog
+productName: Orlog
+copyright: Copyright © Nyscire
+
+directories:
+  output: release
+  buildResources: build
+
+# Vite pakuje Vue i socket.io do dist/, więc do aplikacji nie trafia node_modules
+files:
+  - dist/**/*
+  - electron/**/*
+  - build/icon.png
+  - package.json
+
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Game
+  synopsis: Gra w kości dla dwóch graczy
+  executableName: orlog
+  artifactName: Orlog-${version}.${ext}
+
+win:
+  target:
+    - nsis
+  artifactName: Orlog-Setup-${version}.${ext}
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Orlog
+
+publish: null

@@ -4,6 +4,35 @@
       <button class="close" :aria-label="$t('help.close')" @click="$emit('close')">×</button>
       <h2 id="settings-title">{{ $t('settings.title') }}</h2>
 
+      <!-- adres serwera gry; zmiana przeładowuje okno i łączy od nowa -->
+      <section class="server-section">
+        <h3>{{ $t('settings.server') }}</h3>
+        <form class="server-form" @submit.prevent="applyServer">
+          <input
+            ref="serverInput"
+            v-model="serverInput"
+            class="server-input"
+            :class="{ invalid: serverError }"
+            :placeholder="$t('settings.serverPlaceholder')"
+            :aria-label="$t('settings.server')"
+            spellcheck="false"
+            autocomplete="off"
+            @input="serverError = false"
+          />
+          <button type="submit" class="btn btn-gold server-btn" :disabled="!serverChanged">
+            {{ $t('settings.serverConnect') }}
+          </button>
+        </form>
+        <p class="server-hint" :class="{ error: serverError }">
+          <template v-if="serverError">{{ $t('settings.serverInvalid') }}</template>
+          <template v-else>
+            {{ current.server ? $t('settings.serverCurrent', { url: current.server }) : $t('settings.serverMissing') }}
+            {{ $t('settings.serverFormat') }}
+          </template>
+          <button v-if="canReset" type="button" class="link-btn" @click="resetServer">{{ $t('settings.serverReset') }}</button>
+        </p>
+      </section>
+
       <section>
         <h3>{{ $t('settings.language') }}</h3>
         <div class="segmented">
@@ -78,6 +107,7 @@
       </section>
 
       <div class="actions">
+        <span v-if="version" class="version">{{ $t('settings.version', { version: version }) }}</span>
         <button class="btn btn-gold" @click="$emit('close')">{{ $t('settings.done') }}</button>
       </div>
     </div>
@@ -86,13 +116,34 @@
 
 <script>
 import { FONTS, LANGUAGES, SIZES, THEMES, setSetting, settings } from '../settings'
+import { appVersion, defaultServer, normalizeServer, saveServer, savedServer, serverUrl } from '../server'
 
 export default {
   name: 'SettingsDialog',
+  props: {
+    // pierwsze uruchomienie aplikacji bez adresu serwera: od razu kursor w polu adresu
+    focusServer: Boolean
+  },
   emits: ['close'],
+  data() {
+    return {
+      serverInput: savedServer() || serverUrl(),
+      serverError: false
+    }
+  },
   computed: {
     current() {
-      return settings
+      return { ...settings, server: serverUrl() }
+    },
+    serverChanged() {
+      const url = normalizeServer(this.serverInput)
+      return url !== serverUrl() && !(url === '' && !savedServer())
+    },
+    canReset() {
+      return !!savedServer() && !!defaultServer()
+    },
+    version() {
+      return appVersion
     },
     languages() {
       return LANGUAGES
@@ -109,6 +160,7 @@ export default {
   },
   mounted() {
     window.addEventListener('keydown', this.onKey)
+    if (this.focusServer && this.$refs.serverInput) this.$refs.serverInput.focus()
   },
   beforeUnmount() {
     window.removeEventListener('keydown', this.onKey)
@@ -116,6 +168,18 @@ export default {
   methods: {
     set(key, value) {
       setSetting(key, value)
+    },
+    applyServer() {
+      if (!saveServer(this.serverInput)) {
+        this.serverError = true
+        return
+      }
+      // nowe połączenie najprościej zacząć od świeżego okna
+      window.location.reload()
+    },
+    resetServer() {
+      saveServer('')
+      window.location.reload()
     },
     onKey(event) {
       if (event.key === 'Escape') this.$emit('close')
@@ -176,6 +240,69 @@ h2 {
 
 section + section {
   margin-top: 1rem;
+}
+
+.server-form {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.server-input {
+  flex: 1;
+  min-width: 0;
+  padding: 0.45rem 0.75rem;
+  font: inherit;
+  font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--input-bg);
+  border: 1.5px solid var(--edge);
+  border-radius: 8px;
+}
+
+.server-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.35);
+}
+
+.server-input.invalid {
+  border-color: var(--blood);
+}
+
+.server-btn {
+  flex: 0 0 auto;
+  padding: 0.45rem 1.1rem;
+}
+
+.server-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--ink-soft);
+}
+
+.server-hint.error {
+  color: var(--blood);
+  font-weight: 600;
+}
+
+.link-btn {
+  padding: 0;
+  font: inherit;
+  font-weight: 700;
+  color: var(--gold-dark);
+  background: none;
+  border: none;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.version {
+  margin-right: auto;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
 }
 
 h3 {
@@ -321,6 +448,7 @@ h3 {
 
 .actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
   margin-top: 1.2rem;
 }
