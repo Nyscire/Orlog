@@ -1,8 +1,10 @@
 # Orlog
 
-Gra w kości dla dwóch osób na podstawie minigry z AC:Valhalla. Backend we Flasku (Flask-SocketIO), frontend w Vue 3 + Vite.
+Gra w kości dla dwóch osób na podstawie minigry z AC:Valhalla. Backend we Flasku (Flask-SocketIO), frontend w Vue 3 + Vite, aplikacja na komputer w Electronie.
 
-## Jak odpalić
+Gra ma dwie części: serwer (stoły i partie) i klienta (aplikacja albo strona w przeglądarce). Serwer stoi w jednym miejscu, np. na VPS-ie, a gracze łączą się z nim z aplikacji.
+
+## Jak odpalić u siebie
 
 Backend (port 5000):
 
@@ -12,7 +14,7 @@ pip install -r requirements.txt
 python main.py
 ```
 
-Frontend:
+Frontend w przeglądarce:
 
 ```bash
 cd frontend
@@ -20,11 +22,62 @@ npm install
 npm run dev
 ```
 
-Żeby grać z kimś w tej samej sieci, odpal frontend z `npm run dev -- --host`. Frontend łączy się z backendem na tym samym hoście na porcie 5000. Jak backend stoi gdzie indziej, ustaw adres w `frontend/.env.local`:
+Żeby grać z kimś w tej samej sieci, odpal frontend z `npm run dev -- --host`. W przeglądarce frontend łączy się z backendem na tym samym hoście na porcie 5000. Inny adres można wpisać w ustawieniach gry (sekcja „Serwer gry”) albo na stałe w `frontend/.env.local`:
 
 ```
 VITE_BACKEND_URL=http://192.168.0.10:5000
 ```
+
+## Aplikacja (Electron)
+
+Ten sam frontend w oknie aplikacji, bez przeglądarki. Pliki są w `frontend/electron/` (`main.cjs` otwiera okno, `preload.cjs` przekazuje stronie wersję aplikacji).
+
+```bash
+cd frontend
+npm install
+npm run app          # buduje frontend i otwiera go w oknie aplikacji
+npm run app:dev      # okno z serwerem Vite (w drugim terminalu: npm run dev), zmiany widać od razu
+npm run dist         # instalator na system, na którym budujesz (wyniki w frontend/release/)
+npm run dist:linux   # AppImage i .deb
+npm run dist:win     # instalator .exe (najprościej budować na Windowsie albo w GitHub Actions)
+```
+
+Adres serwera aplikacja bierze z ustawień gry. Przy pierwszym uruchomieniu bez adresu okno ustawień otwiera się samo. Domyślny adres można wbudować przy budowaniu: `VITE_BACKEND_URL=https://orlog.example.com npm run dist`. Bez numeru portu gra łączy się z portem 5000 (`1.2.3.4` → `http://1.2.3.4:5000`).
+
+Skróty w aplikacji: F11 to pełny ekran, Ctrl + plus/minus/0 to powiększenie, a F5 albo Ctrl+R przeładowanie. Narzędzia deweloperskie (F12) są w wersji z `npm run app`, a w zainstalowanej po uruchomieniu z `--devtools`.
+
+### Instalatory z GitHuba
+
+Workflow `.github/workflows/build.yml` przy każdym PR i pushu na `main`:
+- uruchamia testy serwera, buduje obraz Dockera i sprawdza, czy serwer w kontenerze odpowiada,
+- buduje aplikację na Windowsie i Linuksie, uruchamia ją na próbę (zrzut ekranu jest w artefaktach) i zapisuje instalatory jako artefakty.
+
+Wydanie: `git tag v1.0.0 && git push origin v1.0.0` (numer zgodny z `version` w `frontend/package.json`). Instalatory trafiają do szkicu wydania w zakładce Releases; wystarczy go opublikować. Adres serwera wbudowany w instalatory ustawia zmienna repozytorium `ORLOG_SERVER_URL` (Settings → Secrets and variables → Actions → Variables).
+
+Instalatory nie są podpisane, więc Windows przy pierwszym uruchomieniu pokaże ostrzeżenie SmartScreen („Więcej informacji” → „Uruchom mimo to”). Na Linuksie najprościej zainstalować `.deb` (`sudo apt install ./Orlog-1.0.0.deb`); AppImage wymaga biblioteki `libfuse2`.
+
+## Serwer w internecie
+
+Serwer trzyma stoły w pamięci, więc zawsze działa jako jeden proces (`--workers 1`), a połączenia graczy obsługują wątki. Port 5000 musi być otwarty w zaporze. `GET /health` zwraca stan serwera (liczbę stołów i graczy).
+
+Najprościej w Dockerze (z katalogu głównego repo):
+
+```bash
+docker compose -f deploy/docker-compose.yml up -d --build
+```
+
+Bez Dockera, np. na Ubuntu w `/opt/orlog`:
+
+```bash
+sudo useradd --system orlog
+sudo git clone https://github.com/Nyscire/Orlog.git /opt/orlog
+sudo python3 -m venv /opt/orlog/venv
+sudo /opt/orlog/venv/bin/pip install -r /opt/orlog/backend/requirements.txt
+sudo cp /opt/orlog/deploy/orlog.service /etc/systemd/system/
+sudo systemctl enable --now orlog
+```
+
+W aplikacji wpisuje się wtedy adres serwera, np. `1.2.3.4` albo `http://1.2.3.4:5000`. Z domeną można dodać HTTPS przez Caddy (`deploy/Caddyfile`): Caddy sam pobiera certyfikat i przekazuje połączenia do gry, a w aplikacji adres to `https://orlog.example.com`.
 
 ## Zasady w skrócie
 
@@ -75,6 +128,6 @@ cd backend
 python -m unittest discover -s tests -t .
 ```
 
-Czcionki Cinzel, Grenze Gotisch, Alegreya i Atkinson Hyperlegible Next są na licencji SIL Open Font License (pliki `*-OFL.txt` w `frontend/src/assets/fonts`).
+Czcionki Cinzel, Grenze Gotisch, Alegreya, Atkinson Hyperlegible Next i Noto Sans Runic (tylko znaki runiczne) są na licencji SIL Open Font License (pliki `*-OFL.txt` w `frontend/src/assets/fonts`).
 
 Ikony bogów i ręki pochodzą z [game-icons.net](https://game-icons.net) (licencja [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/)), autorzy: Lorc, Delapouite i Caro Asercion. Kolor zmieniony na potrzeby gry.

@@ -155,6 +155,10 @@
       <button class="link-btn" @click="$emit('help')">{{ $t('menu.howToPlay') }}</button>
       <span class="sep">·</span>
       <button class="link-btn" @click="$emit('settings')">{{ $t('menu.settings') }}</button>
+      <template v-if="version">
+        <span class="sep">·</span>
+        <span class="version">v{{ version }}</span>
+      </template>
     </footer>
   </div>
 </template>
@@ -162,6 +166,7 @@
 <script>
 import { LANGUAGES, setSetting, settings } from '../settings'
 import { godIcon } from '../dice'
+import { appVersion, isApp, serverUrl } from '../server'
 
 const STORAGE_KEY = 'orlog.player'
 
@@ -228,12 +233,18 @@ export default {
     myGodsText() {
       return this.myGods.map(name => this.$t('gods.name', { name })).join(', ')
     },
+    version() {
+      return appVersion
+    },
     canSit() {
       return this.connected && this.name.trim().length > 0 &&
         this.selected.length >= 1 && this.selected.length <= this.maxGods
     },
     statusText() {
-      if (!this.connected) return this.$t('menu.status.offline')
+      if (!this.connected) {
+        if (!serverUrl()) return this.$t('menu.status.noServer')
+        return isApp ? this.$t('menu.status.offlineApp', { server: serverUrl() }) : this.$t('menu.status.offline')
+      }
       if (this.seated) return this.$t('menu.status.joined')
       return this.$t('menu.status.online', { tables: this.$t('lobby.count', { n: this.tables.length }) })
     }
@@ -874,6 +885,10 @@ export default {
 
 .sep {
   opacity: 0.6;
+}
+
+.version {
+  opacity: 0.75;
 }
 
 .link-btn {

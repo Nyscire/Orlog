@@ -1,0 +1,6 @@
+# HTTPS przed serwerem gry (opcjonalnie, gdy masz domenę).
+# Caddy sam pobiera certyfikat i przepuszcza WebSockety.
+# W aplikacji adres serwera to wtedy https://orlog.example.com
+orlog.example.com {
+	reverse_proxy 127.0.0.1:5000
+}

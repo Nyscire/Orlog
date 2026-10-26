@@ -23,6 +23,14 @@
   font-display: swap;
 }
 
+/* runy (ᛟ ᚱ ᛚ ᛟ ᚷ) w menu: nie każdy system ma czcionkę z alfabetem runicznym */
+@font-face {
+  font-family: 'Orlog Runes';
+  src: url('./fonts/NotoSansRunic.woff') format('woff');
+  unicode-range: U+16A0-16F8;
+  font-display: swap;
+}
+
 @font-face {
   font-family: 'Atkinson Hyperlegible Next';
   src: url('./fonts/AtkinsonHyperlegibleNext.woff') format('woff');
@@ -291,19 +299,19 @@
 
 :root,
 [data-font="classic"] {
-  --font-title: 'Cinzel', 'Times New Roman', serif;
-  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-title: 'Orlog Runes', 'Cinzel', 'Times New Roman', serif;
+  --font-body: 'Orlog Runes', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif;
 }
 
 [data-font="medieval"] {
-  --font-title: 'Grenze Gotisch', 'Cinzel', serif;
-  --font-body: 'Alegreya', Georgia, 'Times New Roman', serif;
+  --font-title: 'Orlog Runes', 'Grenze Gotisch', 'Cinzel', serif;
+  --font-body: 'Orlog Runes', 'Alegreya', Georgia, 'Times New Roman', serif;
 }
 
 /* czytelna: jedna wyraźna czcionka bezszeryfowa */
 [data-font="readable"] {
-  --font-title: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
-  --font-body: 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-title: 'Orlog Runes', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
+  --font-body: 'Orlog Runes', 'Atkinson Hyperlegible Next', system-ui, sans-serif;
 }
 
 /* większy tekst: wszystko w rem rośnie razem */

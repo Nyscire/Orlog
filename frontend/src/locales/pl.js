@@ -197,6 +197,8 @@ export const pl = {
     settings: 'Ustawienia',
     status: {
       offline: 'Brak połączenia z serwerem. Sprawdź, czy backend działa (python main.py).',
+      offlineApp: 'Brak połączenia z serwerem {server}. Adres zmienisz w ustawieniach.',
+      noServer: 'Podaj adres serwera gry w ustawieniach.',
       joined: 'Połączono z serwerem',
       online: 'Połączono · {tables}'
     }
@@ -413,6 +415,15 @@ export const pl = {
     font: 'Czcionka',
     size: 'Wielkość tekstu',
     done: 'Gotowe',
+    server: 'Serwer gry',
+    serverPlaceholder: 'np. 192.168.0.10 albo https://orlog.example.com',
+    serverConnect: 'Połącz',
+    serverCurrent: 'Teraz: {url}.',
+    serverMissing: 'Podaj adres serwera, z którym ma się łączyć gra.',
+    serverFormat: 'Bez numeru portu gra łączy się z portem 5000.',
+    serverInvalid: 'To nie wygląda na adres serwera.',
+    serverReset: 'Przywróć domyślny',
+    version: 'Orlog {version}',
     sample: 'Topór, strzała i tarcza',
     themes: {
       classic: 'Drewno i złoto',

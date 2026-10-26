@@ -2,12 +2,18 @@
 
 Każdy stół to pokój Socket.IO, więc stan gry trafia tylko do jego graczy.
 Lista stołów (do menu) idzie do wszystkich połączonych.
+
+Uruchomienie:
+  python main.py                                   # u siebie, do grania i testów
+  gunicorn -w 1 --threads 200 -b 0.0.0.0:5000 main:app   # na serwerze (zawsze 1 proces,
+                                                   # bo stoły są w pamięci)
 """
 import logging
+import os
 import threading
 from typing import Callable, Optional
 
-from flask import Flask, request
+from flask import Flask, jsonify, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from errors import GameError
@@ -18,7 +24,8 @@ logging.basicConfig(level=logging.INFO, format="[%(levelname)s] %(message)s")
 log = logging.getLogger(__name__)
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+# zwykłe wątki + simple-websocket; ten sam tryb w `python main.py` i pod gunicornem
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 manager = TableManager()
 # obsługa zdarzeń i sprzątanie w tle zmieniają te same dane; wysyłamy już po zwolnieniu blokady
@@ -61,6 +68,14 @@ def start_sweeper() -> None:
             return
         _sweeper_started = True
     socketio.start_background_task(sweeper)
+
+
+@app.route('/health')
+def health():
+    """Do sprawdzania, czy serwer żyje (Docker, monitoring, test adresu w aplikacji)."""
+    with lock:
+        tables, players = len(manager.tables), len(manager.seats)
+    return jsonify(status="ok", tables=tables, players=players)
 
 
 @socketio.on('connect')
@@ -214,4 +229,6 @@ def handle_new_game(*_):
 
 
 if __name__ == '__main__':
-    socketio.run(app, host='0.0.0.0', port=5000)
+    # serwer wbudowany we Flaska: wygodny u siebie; na serwerze lepiej gunicorn (zob. README)
+    socketio.run(app, host=os.environ.get('ORLOG_HOST', '0.0.0.0'),
+                 port=int(os.environ.get('ORLOG_PORT', '5000')), allow_unsafe_werkzeug=True)
