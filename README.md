@@ -41,7 +41,7 @@ Po odświeżeniu strony wystarczy wpisać tę samą nazwę, żeby wrócić do gr
 
 ## Ustawienia
 
-W menu i na planszy (ikona zębatki) są ustawienia: język (polski albo angielski), cztery motywy kolorów, trzy zestawy czcionek i większy tekst. Zapisują się w przeglądarce. Każdy gracz może grać w swoim języku, bo serwer wysyła dziennik i błędy jako kody, a zdania tworzy frontend.
+W menu i na planszy (ikona zębatki) są ustawienia: język (polski albo angielski), sześć motywów kolorów (w tym dwa ciemne: „Noc polarna” i „Otchłań Hel”), trzy zestawy czcionek i większy tekst. Zapisują się w przeglądarce. Każdy gracz może grać w swoim języku, bo serwer wysyła dziennik i błędy jako kody, a zdania tworzy frontend.
 
 - teksty: `frontend/src/locales/pl.js` i `en.js` (te same klucze); nowy język to kolejny plik plus wpis w `LANGUAGES` w `settings.js` i w `messages` w `i18n.js`
 - motywy i czcionki: `frontend/src/assets/theme.css` (zmienne kolorów dla każdego `data-theme`, czcionki dla `data-font`)

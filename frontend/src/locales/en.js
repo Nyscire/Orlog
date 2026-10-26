@@ -389,7 +389,9 @@ export const en = {
       classic: 'Wood and gold',
       frost: 'Frozen north',
       ember: 'Ash and blood',
-      forest: 'Forest moss'
+      forest: 'Forest moss',
+      night: 'Polar night',
+      abyss: "Hel's abyss"
     },
     fonts: {
       classic: 'Classic',

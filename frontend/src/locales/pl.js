@@ -408,7 +408,9 @@ export const pl = {
       classic: 'Drewno i złoto',
       frost: 'Mroźna północ',
       ember: 'Popiół i krew',
-      forest: 'Leśny mech'
+      forest: 'Leśny mech',
+      night: 'Noc polarna',
+      abyss: 'Otchłań Hel'
     },
     fonts: {
       classic: 'Klasyczna',

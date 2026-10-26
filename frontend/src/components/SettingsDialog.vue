@@ -165,7 +165,7 @@ export default {
 }
 
 .close:hover {
-  background: rgba(0, 0, 0, 0.08);
+  background: var(--shade);
 }
 
 h2 {
@@ -217,8 +217,15 @@ h3 {
   gap: 0.6rem;
 }
 
+/* 6 motywów w dwóch rzędach po 3 */
 .themes {
-  grid-template-columns: repeat(auto-fill, minmax(125px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 480px) {
+  .themes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .fonts {
@@ -296,7 +303,7 @@ h3 {
   gap: 0.15rem;
   padding: 0.4rem 0.25rem;
   border-radius: 7px;
-  background: rgba(0, 0, 0, 0.04);
+  background: var(--shade);
 }
 
 .sample-title {
