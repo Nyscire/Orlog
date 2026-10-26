@@ -3,7 +3,10 @@
 //   npm run app                       zbudowany frontend (dist/) w oknie aplikacji
 //   npm run app:dev                   okno z serwerem deweloperskim Vite (npm run dev w drugim terminalu)
 //   electron . --smoke-test[=plik]    test uruchomienia dla CI: sprawdza menu, robi zrzut ekranu i wychodzi
-const { app, BrowserWindow, Menu, ipcMain, net, protocol, screen, shell } = require('electron')
+//
+// Ctrl+Shift+N albo ponowne uruchomienie aplikacji otwiera kolejne okno jako osobny gracz
+// (własna, tymczasowa pamięć), np. żeby zagrać samemu ze sobą na jednym komputerze.
+const { app, BrowserWindow, Menu, ipcMain, net, protocol, screen, session, shell } = require('electron')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
 
@@ -28,8 +31,8 @@ protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true } }
 ])
 
-function serveDist() {
-  protocol.handle(SCHEME, async request => {
+function serveDist(ses) {
+  ses.protocol.handle(SCHEME, async request => {
     const { pathname } = new URL(request.url)
     const file = path.normalize(path.join(DIST, decodeURIComponent(pathname === '/' ? '/index.html' : pathname)))
     // nic spoza katalogu dist/
@@ -44,37 +47,59 @@ function serveDist() {
   })
 }
 
-// --- okno ---
+// --- okna ---
 
 let mainWindow = null
+let playerCount = 1
+// ustawienia przekazywane nowemu oknu gracza (motyw, język, adres serwera), po id webContents
+const seeds = new Map()
 
-function createWindow() {
+function createWindow({ player = 1, partition, seed } = {}) {
   const { width, height } = screen.getPrimaryDisplay().workAreaSize
-  mainWindow = new BrowserWindow({
-    width: Math.min(1440, width),
-    height: Math.min(900, height),
+  const extra = player > 1
+  const title = extra ? `Orlog · gracz ${player}` : 'Orlog'
+  if (partition) serveDist(session.fromPartition(partition))
+
+  const win = new BrowserWindow({
+    width: Math.min(extra ? 1366 : 1440, width),
+    height: Math.min(extra ? 800 : 900, height),
     minWidth: 1024,
     minHeight: 640,
-    title: 'Orlog',
+    title,
     backgroundColor: '#2a1d14',
     icon: path.join(__dirname, '..', 'build', 'icon.png'),
     show: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
+      partition,
       contextIsolation: true,
       sandbox: true,
       nodeIntegration: false,
       spellcheck: false
     }
   })
-
-  mainWindow.once('ready-to-show', () => {
-    // na laptopach (np. 1366×768) od razu na cały ekran roboczy
-    if (width <= 1440 || height <= 900) mainWindow.maximize()
-    if (smokeShot === undefined) mainWindow.show()
+  const contents = win.webContents
+  seeds.set(contents.id, { player, seed: seed || null, packaged: app.isPackaged })
+  // preload działa też dla pustej strony, którą okno ma przed wczytaniem gry,
+  // więc ustawienia oddajemy aż do pierwszego pełnego wczytania strony gry
+  contents.once('did-finish-load', () => {
+    const entry = seeds.get(contents.id)
+    if (entry) entry.seed = null
   })
 
-  const contents = mainWindow.webContents
+  win.once('ready-to-show', () => {
+    // na laptopach (np. 1366×768) główne okno od razu na cały ekran roboczy
+    if (!extra && (width <= 1440 || height <= 900)) win.maximize()
+    if (smokeShot === undefined) win.show()
+  })
+
+  // dodatkowe okna zostają podpisane numerem gracza, choć strona ustawia swój tytuł
+  if (extra) {
+    contents.on('page-title-updated', event => {
+      event.preventDefault()
+      win.setTitle(title)
+    })
+  }
 
   // linki zewnętrzne otwiera przeglądarka, a okno gry zostaje na swojej stronie
   contents.setWindowOpenHandler(({ url }) => {
@@ -95,9 +120,10 @@ function createWindow() {
     const ctrl = input.control || input.meta
     const key = input.key.toLowerCase()
     let handled = true
-    if (input.key === 'F11') mainWindow.setFullScreen(!mainWindow.isFullScreen())
-    else if (input.key === 'Escape' && mainWindow.isFullScreen()) mainWindow.setFullScreen(false)
+    if (input.key === 'F11') win.setFullScreen(!win.isFullScreen())
+    else if (input.key === 'Escape' && win.isFullScreen()) win.setFullScreen(false)
     else if (input.key === 'F5' || (ctrl && key === 'r')) contents.reload()
+    else if (ctrl && input.shift && key === 'n') openPlayerWindow(contents)
     else if (ctrl && (key === '=' || key === '+')) contents.setZoomLevel(Math.min(contents.getZoomLevel() + 0.5, 3))
     else if (ctrl && key === '-') contents.setZoomLevel(Math.max(contents.getZoomLevel() - 0.5, -3))
     else if (ctrl && key === '0') contents.setZoomLevel(0)
@@ -106,10 +132,37 @@ function createWindow() {
     if (handled) event.preventDefault()
   })
 
-  if (smokeShot !== undefined) runSmokeTest(mainWindow, smokeShot)
+  if (!extra && smokeShot !== undefined) runSmokeTest(win, smokeShot)
 
-  mainWindow.on('closed', () => { mainWindow = null })
-  mainWindow.loadURL(devUrl || `${ORIGIN}/index.html`)
+  win.on('closed', () => {
+    seeds.delete(contents.id)
+    if (win === mainWindow) mainWindow = null
+  })
+  win.loadURL(devUrl || `${ORIGIN}/index.html`)
+  return win
+}
+
+// Nowe okno = nowy gracz: osobna pamięć (bez sesji przy stole i imienia z pierwszego okna),
+// ale te same ustawienia wyglądu i ten sam serwer.
+async function openPlayerWindow(fromContents) {
+  let seed = null
+  const source = fromContents || (mainWindow && mainWindow.webContents)
+  if (source && !source.isDestroyed()) {
+    try {
+      seed = JSON.parse(await source.executeJavaScript(
+        "JSON.stringify({ 'orlog.settings': localStorage.getItem('orlog.settings'), 'orlog.server': localStorage.getItem('orlog.server') })"))
+    } catch (e) {
+      seed = null
+    }
+  }
+  playerCount += 1
+  const win = createWindow({ player: playerCount, partition: `gracz-${playerCount}`, seed })
+  // trochę obok poprzedniego okna, żeby było widać, że to drugie
+  const from = source && BrowserWindow.fromWebContents(source)
+  if (from && !from.isMaximized()) {
+    const [x, y] = from.getPosition()
+    win.setPosition(x + 40, y + 40)
+  }
 }
 
 // --- test uruchomienia dla CI ---
@@ -157,25 +210,36 @@ function runSmokeTest(win, shotPath) {
 // --- start ---
 
 ipcMain.on('orlog:info', event => {
-  event.returnValue = { version: app.getVersion(), platform: process.platform }
+  const extra = seeds.get(event.sender.id) || {}
+  event.returnValue = {
+    version: app.getVersion(),
+    platform: process.platform,
+    packaged: app.isPackaged,
+    player: extra.player || 1,
+    seed: extra.seed || null
+  }
 })
 
-// jedna kopia aplikacji: drugie uruchomienie pokazuje istniejące okno
+ipcMain.on('orlog:new-window', event => openPlayerWindow(event.sender))
+
+// jedna kopia aplikacji; ponowne uruchomienie otwiera w niej okno kolejnego gracza
 if (smokeShot === undefined && !app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
-    if (!mainWindow) return
-    if (mainWindow.isMinimized()) mainWindow.restore()
-    mainWindow.focus()
+    if (!mainWindow) {
+      mainWindow = createWindow()
+      return
+    }
+    openPlayerWindow(mainWindow.webContents)
   })
 
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
-    serveDist()
-    createWindow()
+    serveDist(session.defaultSession)
+    mainWindow = createWindow()
     app.on('activate', () => {
-      if (BrowserWindow.getAllWindows().length === 0) createWindow()
+      if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
     })
   })
 

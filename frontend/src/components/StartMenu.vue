@@ -155,6 +155,10 @@
       <button class="link-btn" @click="$emit('help')">{{ $t('menu.howToPlay') }}</button>
       <span class="sep">·</span>
       <button class="link-btn" @click="$emit('settings')">{{ $t('menu.settings') }}</button>
+      <template v-if="canOpenWindow">
+        <span class="sep">·</span>
+        <button class="link-btn" :title="$t('settings.newWindowHint')" @click="newWindow">{{ $t('menu.newWindow') }}</button>
+      </template>
       <template v-if="version">
         <span class="sep">·</span>
         <span class="version">v{{ version }}</span>
@@ -166,7 +170,7 @@
 <script>
 import { LANGUAGES, setSetting, settings } from '../settings'
 import { godIcon } from '../dice'
-import { appVersion, isApp, serverUrl } from '../server'
+import { appVersion, canOpenWindow, isApp, openPlayerWindow, serverUrl } from '../server'
 
 const STORAGE_KEY = 'orlog.player'
 
@@ -236,6 +240,9 @@ export default {
     version() {
       return appVersion
     },
+    canOpenWindow() {
+      return canOpenWindow
+    },
     canSit() {
       return this.connected && this.name.trim().length > 0 &&
         this.selected.length >= 1 && this.selected.length <= this.maxGods
@@ -290,6 +297,9 @@ export default {
       else if (this.selected.length < this.maxGods) this.selected = [...this.selected, god.name]
       else this.selected = [...this.selected.slice(1), god.name]
       this.lastPicked = god.name
+    },
+    newWindow() {
+      openPlayerWindow()
     },
     setLanguage(id) {
       setSetting('locale', id)
