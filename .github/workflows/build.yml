@@ -84,6 +84,21 @@ jobs:
         if: runner.os == 'Windows'
         run: release/win-unpacked/Orlog.exe --disable-gpu --smoke-test=smoke-windows.png
 
+      # pliki do wysłania znajomemu, uruchomione tak jak u niego: bez instalacji
+      - name: Test przenośnego exe (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          ./release/Orlog-*-portable.exe --disable-gpu --smoke-test="$PWD/smoke-windows-portable.png"
+          # przenośny exe najpierw się rozpakowuje, więc zrzut może pojawić się chwilę później
+          for i in $(seq 1 60); do [ -f smoke-windows-portable.png ] && exit 0; sleep 1; done
+          echo "brak zrzutu z przenośnego exe"; exit 1
+
+      - name: Test AppImage (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          chmod +x release/*.AppImage
+          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a release/Orlog-*.AppImage --disable-gpu --smoke-test="$PWD/smoke-linux-appimage.png"
+
       - uses: actions/upload-artifact@v4
         with:
           name: orlog-${{ runner.os }}
