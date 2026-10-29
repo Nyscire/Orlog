@@ -80,6 +80,7 @@
 
     <HelpDialog v-if="showHelp" @close="showHelp = false" />
     <SettingsDialog v-if="showSettings" :focus-server="!hasServer" @close="showSettings = false" />
+    <UpdateBanner />
   </div>
 </template>
 
@@ -88,6 +89,7 @@ import socket from '../socket';
 import StartMenu from './StartMenu.vue';
 import HelpDialog from './HelpDialog.vue';
 import SettingsDialog from './SettingsDialog.vue';
+import UpdateBanner from './UpdateBanner.vue';
 import { errorText } from '../i18n';
 import { isApp, serverUrl } from '../server';
 
@@ -120,6 +122,7 @@ export default {
     StartMenu,
     HelpDialog,
     SettingsDialog,
+    UpdateBanner,
     OpponentSection,
     NeutralZone,
     PlayerSection

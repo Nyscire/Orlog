@@ -52,9 +52,27 @@ Skróty w aplikacji: F11 to pełny ekran, Ctrl + plus/minus/0 to powiększenie, 
 
 Workflow `.github/workflows/build.yml` przy każdym PR i pushu na `main`:
 - uruchamia testy serwera, buduje obraz Dockera i sprawdza, czy serwer w kontenerze odpowiada,
-- buduje aplikację na Windowsie i Linuksie, uruchamia ją na próbę (zrzut ekranu jest w artefaktach) i zapisuje instalatory jako artefakty.
+- buduje aplikację na Windowsie i Linuksie, uruchamia na próbę zarówno zbudowaną aplikację, jak i pliki do wysłania (przenośny exe, AppImage), a zrzuty ekranu i instalatory zapisuje jako artefakty.
 
 Wydanie: `git tag v1.0.0 && git push origin v1.0.0` (numer zgodny z `version` w `frontend/package.json`). Instalatory trafiają do szkicu wydania w zakładce Releases; wystarczy go opublikować. Adres serwera wbudowany w instalatory ustawia zmienna repozytorium `ORLOG_SERVER_URL` (Settings → Secrets and variables → Actions → Variables).
+
+### Aktualizacje
+
+Zainstalowana aplikacja przy starcie i co godzinę sprawdza, czy na GitHubie jest nowsze wydanie (electron-updater, kod w `frontend/electron/updater.cjs`):
+- instalator na Windowsa i AppImage: nowa wersja pobiera się w tle, a potem w rogu okna pojawia się pasek „Nowa wersja … jest gotowa” z przyciskiem „Uruchom ponownie”. Bez kliknięcia instaluje się przy zamknięciu gry. Po ponownym uruchomieniu gracz wraca do swojego stołu.
+- paczka `.deb`: też pobiera się w tle, a „Zainstaluj” pyta o hasło (instalacja pakietu w systemie).
+- przenośny `.exe` nie potrafi się podmienić, więc pasek pokazuje tylko „Pobierz” z linkiem do strony z wydaniami.
+- aplikacja uruchomiona z kodu (`npm run app`) niczego nie sprawdza.
+
+Nowa wersja dla graczy: `git tag v1.0.1 && git push origin v1.0.1`, a potem „Publish release” przy szkicu w zakładce Releases. Numer wersji aplikacji CI bierze z tagu, więc nie trzeba go zmieniać w `package.json`. Aplikacje widzą tylko opublikowane wydania (szkic jeszcze nie), a do aktualizacji potrzebują plików `latest.yml` i `latest-linux.yml`, które CI dokłada do wydania razem z instalatorami.
+
+### Jeden plik do wysłania
+
+Bez instalacji, np. dla znajomego:
+- Windows: `Orlog-1.0.0-portable.exe`. Uruchamia się dwuklikiem; pierwsze uruchomienie trwa kilka sekund dłużej, bo plik się rozpakowuje.
+- Linux: `Orlog-1.0.0.AppImage`. Wystarczy nadać prawo do uruchamiania (`chmod +x Orlog-1.0.0.AppImage` albo we właściwościach pliku) i kliknąć. Na Ubuntu 24.04 i nowszych AppImage może nie wystartować przez ograniczenia AppArmor; wtedy `./Orlog-1.0.0.AppImage --no-sandbox` albo instalacja z `.deb`.
+
+Oba pliki powstają razem z instalatorami (`npm run dist:win`, `npm run dist:linux`, a przy tagu `v*` trafiają do wydania na GitHubie). Plik to tylko aplikacja: znajomy musi mieć dostęp do serwera gry. Adres wbudowany przy budowaniu (`VITE_BACKEND_URL` albo zmienna `ORLOG_SERVER_URL` w GitHub Actions) sprawia, że nic nie musi wpisywać; bez niego wpisuje adres w ustawieniach przy pierwszym starcie.
 
 Instalatory nie są podpisane, więc Windows przy pierwszym uruchomieniu pokaże ostrzeżenie SmartScreen („Więcej informacji” → „Uruchom mimo to”). Na Linuksie najprościej zainstalować `.deb` (`sudo apt install ./Orlog-1.0.0.deb`); AppImage wymaga biblioteki `libfuse2`.
 

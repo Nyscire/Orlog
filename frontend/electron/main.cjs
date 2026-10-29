@@ -3,12 +3,16 @@
 //   npm run app                       zbudowany frontend (dist/) w oknie aplikacji
 //   npm run app:dev                   okno z serwerem deweloperskim Vite (npm run dev w drugim terminalu)
 //   electron . --smoke-test[=plik]    test uruchomienia dla CI: sprawdza menu, robi zrzut ekranu i wychodzi
+//   orlog --update-test               test aktualizacji dla CI: sprawdza ORLOG_UPDATE_URL, pobiera i wychodzi
+//
+// Aktualizacje z wydań na GitHubie obsługuje updater.cjs.
 //
 // Ctrl+Shift+N albo ponowne uruchomienie aplikacji otwiera kolejne okno jako osobny gracz
 // (własna, tymczasowa pamięć), np. żeby zagrać samemu ze sobą na jednym komputerze.
 const { app, BrowserWindow, Menu, ipcMain, net, protocol, screen, session, shell } = require('electron')
 const path = require('node:path')
 const { pathToFileURL } = require('node:url')
+const { setupUpdates } = require('./updater.cjs')
 
 // Pliki frontendu idą przez własny protokół app://orlog/..., a nie file://.
 // Dzięki temu działają ścieżki od korzenia (/img/...), a localStorage ma stały adres.
@@ -25,6 +29,7 @@ function argValue(name) {
 
 const devUrl = argValue('dev-url') || null
 const smokeShot = argValue('smoke-test')   // undefined: zwykłe uruchomienie
+const updateTest = argValue('update-test') !== undefined
 const allowDevTools = !app.isPackaged || argValue('devtools') !== undefined
 
 protocol.registerSchemesAsPrivileged([
@@ -207,6 +212,35 @@ function runSmokeTest(win, shotPath) {
   })
 }
 
+// --- aktualizacje ---
+
+let updates = null
+
+function sendUpdateState(state) {
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (!win.isDestroyed()) win.webContents.send('orlog:update', state)
+  }
+}
+
+function runUpdateTest() {
+  // CI: nowa wersja ma się znaleźć i pobrać; instalacji nie robimy
+  const finish = (code, message) => {
+    console.log(`[update-test] ${message}`)
+    app.exit(code)
+  }
+  if (!updates) return finish(1, 'aktualizacje wyłączone (aplikacja nie jest zainstalowana?)')
+  setTimeout(() => finish(4, 'przekroczony czas'), 120000)
+  updates.onDownloaded(info => finish(0, `OK pobrano ${info.version}`))
+  updates.onError(error => finish(1, `błąd: ${error && error.message}`))
+  updates.check().then(result => {
+    if (!result || !result.isUpdateAvailable) finish(1, `brak nowszej wersji (${result && result.updateInfo && result.updateInfo.version})`)
+  })
+}
+
+ipcMain.handle('orlog:update-state', () => (updates ? updates.getState() : null))
+ipcMain.on('orlog:update-install', () => updates && updates.install())
+ipcMain.on('orlog:update-download-page', () => updates && updates.openDownloadPage())
+
 // --- start ---
 
 ipcMain.on('orlog:info', event => {
@@ -223,7 +257,7 @@ ipcMain.on('orlog:info', event => {
 ipcMain.on('orlog:new-window', event => openPlayerWindow(event.sender))
 
 // jedna kopia aplikacji; ponowne uruchomienie otwiera w niej okno kolejnego gracza
-if (smokeShot === undefined && !app.requestSingleInstanceLock()) {
+if (smokeShot === undefined && !updateTest && !app.requestSingleInstanceLock()) {
   app.quit()
 } else {
   app.on('second-instance', () => {
@@ -237,7 +271,12 @@ if (smokeShot === undefined && !app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     Menu.setApplicationMenu(null)
     serveDist(session.defaultSession)
+    if (smokeShot === undefined) {
+      updates = setupUpdates({ onState: sendUpdateState, log: message => console.log(`[aktualizacje] ${message}`) })
+    }
+    if (updateTest) return runUpdateTest()
     mainWindow = createWindow()
+    if (updates) updates.start()
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) mainWindow = createWindow()
     })

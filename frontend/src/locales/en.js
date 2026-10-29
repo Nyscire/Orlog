@@ -428,6 +428,18 @@ export const en = {
     }
   },
 
+  update: {
+    readyTitle: 'Version {version} is ready',
+    readyText: 'It installs when you close the game, or now after a restart.',
+    readyTextPassword: 'Installing asks for your password, then the game restarts.',
+    availableTitle: 'Version {version} is available',
+    availableText: 'Download the new file from the game releases page.',
+    restart: 'Restart now',
+    install: 'Install',
+    download: 'Download',
+    later: 'Later'
+  },
+
   errors: {
     game_finished: 'The game is already over.',
     wrong_stage: 'That is not possible in this phase.',

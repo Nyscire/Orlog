@@ -1,5 +1,7 @@
 # Instalatory aplikacji: npm run dist (system, na którym budujesz),
-# npm run dist:linux, npm run dist:win. Wyniki trafiają do release/.
+# npm run dist:linux, npm run dist:win. Wyniki trafiają do release/:
+#   Windows: Orlog-Setup-<wersja>.exe (instalator) i Orlog-<wersja>-portable.exe (bez instalacji)
+#   Linux:   Orlog-<wersja>.AppImage (jeden plik) i Orlog-<wersja>.deb (instalacja z menu)
 appId: com.nyscire.orlog
 productName: Orlog
 copyright: Copyright © Nyscire
@@ -8,7 +10,8 @@ directories:
   output: release
   buildResources: build
 
-# Vite pakuje Vue i socket.io do dist/, więc do aplikacji nie trafia node_modules
+# Vite pakuje Vue i socket.io do dist/, więc z node_modules do aplikacji trafia
+# tylko to, co jest w "dependencies" (electron-updater dla procesu głównego)
 files:
   - dist/**/*
   - electron/**/*
@@ -27,13 +30,25 @@ linux:
 win:
   target:
     - nsis
-  artifactName: Orlog-Setup-${version}.${ext}
+    - portable
 
+# instalator: wybór katalogu, skrót na pulpicie i w menu Start
 nsis:
+  artifactName: Orlog-Setup-${version}.${ext}
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   shortcutName: Orlog
 
-publish: null
+# jeden plik .exe bez instalacji: do wysłania znajomemu, uruchamia się dwuklikiem
+portable:
+  artifactName: Orlog-${version}-portable.${ext}
+
+# Skąd zainstalowana aplikacja bierze aktualizacje: latest.yml (Windows) i latest-linux.yml
+# z wydania na GitHubie. Samo budowanie niczego nie wysyła (--publish never); wydanie
+# z plikami tworzy GitHub Actions przy tagu v*.
+publish:
+  provider: github
+  owner: Nyscire
+  repo: Orlog
