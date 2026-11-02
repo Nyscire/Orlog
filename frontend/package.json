@@ -21,6 +21,9 @@
     "dist:linux": "vite build && electron-builder --linux --publish never",
     "dist:win": "vite build && electron-builder --win --publish never"
   },
+  "dependencies": {
+    "electron-updater": "6.8.10"
+  },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.2.3",
     "electron": "44.7.0",

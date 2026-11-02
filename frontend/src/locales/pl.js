@@ -447,6 +447,18 @@ export const pl = {
     }
   },
 
+  update: {
+    readyTitle: 'Nowa wersja {version} jest gotowa',
+    readyText: 'Zainstaluje się przy zamknięciu gry albo teraz, po ponownym uruchomieniu.',
+    readyTextPassword: 'Instalacja poprosi o hasło, a potem gra uruchomi się ponownie.',
+    availableTitle: 'Dostępna nowa wersja {version}',
+    availableText: 'Pobierz nowy plik ze strony z wydaniami gry.',
+    restart: 'Uruchom ponownie',
+    install: 'Zainstaluj',
+    download: 'Pobierz',
+    later: 'Później'
+  },
+
   errors: {
     game_finished: 'Gra już się zakończyła.',
     wrong_stage: 'To nie jest ta faza gry.',

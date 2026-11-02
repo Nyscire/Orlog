@@ -1,5 +1,5 @@
 // Most między oknem gry a Electronem. Strona dostaje informację, że działa w aplikacji,
-// numer wersji i możliwość otwarcia okna kolejnego gracza; żadnego dostępu do Node.
+// numer wersji, okno kolejnego gracza i stan aktualizacji; żadnego dostępu do Node.
 const { contextBridge, ipcRenderer } = require('electron')
 
 const info = ipcRenderer.sendSync('orlog:info') || {}
@@ -21,5 +21,12 @@ contextBridge.exposeInMainWorld('orlog', {
   platform: info.platform || '',
   packaged: !!info.packaged,
   player: info.player || 1,
-  newWindow: () => ipcRenderer.send('orlog:new-window')
+  newWindow: () => ipcRenderer.send('orlog:new-window'),
+  // aktualizacje: stan ({ status, version, percent, manual, needsPassword }) i akcje
+  updateState: () => ipcRenderer.invoke('orlog:update-state'),
+  onUpdate: callback => {
+    ipcRenderer.on('orlog:update', (event, state) => callback(state))
+  },
+  installUpdate: () => ipcRenderer.send('orlog:update-install'),
+  openDownloadPage: () => ipcRenderer.send('orlog:update-download-page')
 })

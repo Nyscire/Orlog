@@ -10,7 +10,8 @@ directories:
   output: release
   buildResources: build
 
-# Vite pakuje Vue i socket.io do dist/, więc do aplikacji nie trafia node_modules
+# Vite pakuje Vue i socket.io do dist/, więc z node_modules do aplikacji trafia
+# tylko to, co jest w "dependencies" (electron-updater dla procesu głównego)
 files:
   - dist/**/*
   - electron/**/*
@@ -44,4 +45,10 @@ nsis:
 portable:
   artifactName: Orlog-${version}-portable.${ext}
 
-publish: null
+# Skąd zainstalowana aplikacja bierze aktualizacje: latest.yml (Windows) i latest-linux.yml
+# z wydania na GitHubie. Samo budowanie niczego nie wysyła (--publish never); wydanie
+# z plikami tworzy GitHub Actions przy tagu v*.
+publish:
+  provider: github
+  owner: Nyscire
+  repo: Orlog

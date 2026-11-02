@@ -56,6 +56,16 @@ Workflow `.github/workflows/build.yml` przy każdym PR i pushu na `main`:
 
 Wydanie: `git tag v1.0.0 && git push origin v1.0.0` (numer zgodny z `version` w `frontend/package.json`). Instalatory trafiają do szkicu wydania w zakładce Releases; wystarczy go opublikować. Adres serwera wbudowany w instalatory ustawia zmienna repozytorium `ORLOG_SERVER_URL` (Settings → Secrets and variables → Actions → Variables).
 
+### Aktualizacje
+
+Zainstalowana aplikacja przy starcie i co godzinę sprawdza, czy na GitHubie jest nowsze wydanie (electron-updater, kod w `frontend/electron/updater.cjs`):
+- instalator na Windowsa i AppImage: nowa wersja pobiera się w tle, a potem w rogu okna pojawia się pasek „Nowa wersja … jest gotowa” z przyciskiem „Uruchom ponownie”. Bez kliknięcia instaluje się przy zamknięciu gry. Po ponownym uruchomieniu gracz wraca do swojego stołu.
+- paczka `.deb`: też pobiera się w tle, a „Zainstaluj” pyta o hasło (instalacja pakietu w systemie).
+- przenośny `.exe` nie potrafi się podmienić, więc pasek pokazuje tylko „Pobierz” z linkiem do strony z wydaniami.
+- aplikacja uruchomiona z kodu (`npm run app`) niczego nie sprawdza.
+
+Nowa wersja dla graczy: `git tag v1.0.1 && git push origin v1.0.1`, a potem „Publish release” przy szkicu w zakładce Releases. Numer wersji aplikacji CI bierze z tagu, więc nie trzeba go zmieniać w `package.json`. Aplikacje widzą tylko opublikowane wydania (szkic jeszcze nie), a do aktualizacji potrzebują plików `latest.yml` i `latest-linux.yml`, które CI dokłada do wydania razem z instalatorami.
+
 ### Jeden plik do wysłania
 
 Bez instalacji, np. dla znajomego:
