@@ -7,15 +7,14 @@
 //   npm run wydanie -- --bez-wysylania   tylko buduje wszystko do release/, nic nie wysyła
 //
 // Na Linuksie powstają pliki na oba systemy (AppImage, .deb, instalator i przenośny .exe),
-// na Windowsie tylko te na Windowsa. Instalator na Windowsa budowany na Linuksie potrzebuje Wine
-// (jednorazowo, zob. WINE_INSTALL). Do wysyłania potrzebny jest token GitHuba: zalogowane gh
+// na Windowsie tylko te na Windowsa (Wine nie jest potrzebne, zob. scripts/electron-builder.mjs).
+// Do wysyłania potrzebny jest token GitHuba: zalogowane gh
 // (gh auth login) albo zmienna GH_TOKEN. Adres serwera wbudowany w aplikację to VITE_BACKEND_URL
 // z frontend/.env.production.local (albo ze zmiennej środowiskowej).
 import { execFileSync, spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import http from 'node:http'
 import https from 'node:https'
-import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -25,8 +24,6 @@ const PACKAGE = path.join(ROOT, 'package.json')
 const API = (process.env.GITHUB_API_URL || 'https://api.github.com').replace(/\/$/, '')
 const WINDOWS = process.platform === 'win32'
 const OPTIONS = ['--szkic', '--bez-wysylania']
-// 32-bitowe Wine jest potrzebne na Ubuntu 24.04 i starszych; na nowszych samo "wine" też wystarczy
-const WINE_INSTALL = 'sudo dpkg --add-architecture i386 && sudo apt update && sudo apt install wine wine32:i386'
 
 function fail(message) {
   console.error(`\n✗ ${message}`)
@@ -76,27 +73,6 @@ function findToken() {
   }
 }
 
-function hasWine() {
-  try {
-    execFileSync('wine', ['--version'], { stdio: 'ignore' })
-    return true
-  } catch (e) {
-    return false
-  }
-}
-
-// Pierwsze uruchomienie Wine zakłada jego katalog (~/.wine) i potrafi zapytać okienkiem o Wine Mono,
-// a electron-builder czeka na Wine tylko 2 minuty. Dlatego katalog zakładamy wcześniej, bez pytań.
-function prepareWine() {
-  const prefix = process.env.WINEPREFIX || path.join(os.homedir(), '.wine')
-  if (fs.existsSync(path.join(prefix, 'system.reg'))) return
-  console.log('\nPierwsze uruchomienie Wine: zakładam jego katalog, to chwilę potrwa')
-  const env = { ...process.env, WINEDEBUG: '-all', WINEDLLOVERRIDES: 'mscoree,mshtml=;winemenubuilder.exe=d' }
-  const result = spawnSync('wine', ['wineboot', '--init'], { stdio: 'inherit', env })
-  spawnSync('wineserver', ['-w'], { stdio: 'ignore', env })
-  if (result.status !== 0) warn('wineboot zakończył się błędem, ale budowanie spróbuje dalej')
-}
-
 function git(...args) {
   try {
     return execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim()
@@ -118,11 +94,11 @@ function serverAddress() {
   return value
 }
 
-function run(command, args, hint = '') {
+function run(command, args) {
   console.log(`\n$ ${[command, ...args].join(' ')}`)
   const result = spawnSync(command, args, { cwd: ROOT, stdio: 'inherit', shell: WINDOWS })
   if (result.error) fail(`Nie udało się uruchomić ${command}: ${result.error.message}`)
-  if (result.status !== 0) fail(`${command} ${args[0]} zakończył się błędem (kod ${result.status})${hint ? `\n  ${hint}` : ''}`)
+  if (result.status !== 0) fail(`${command} ${args[0]} zakończył się błędem (kod ${result.status})`)
 }
 
 // --- GitHub ---
@@ -222,9 +198,6 @@ async function main() {
   if (!fs.existsSync(path.join(ROOT, 'node_modules', 'electron-builder'))) {
     fail('Brak zależności: najpierw npm install w katalogu frontend')
   }
-  if (!WINDOWS && !hasWine()) {
-    fail(`Do zbudowania instalatora na Windowsa potrzebne jest Wine. Wystarczy raz zainstalować:\n  ${WINE_INSTALL}`)
-  }
 
   const repo = readRepo()
   const version = newVersion || readVersion()
@@ -274,11 +247,9 @@ async function main() {
     : 'Bez wbudowanego adresu serwera: gracz wpisze go w ustawieniach (VITE_BACKEND_URL w .env.production.local)')
   if (WINDOWS) warn('Na Windowsie nie powstaną pliki na Linuksa, więc gracze z AppImage i .deb nie dostaną tej wersji.')
 
-  if (!WINDOWS) prepareWine()
   fs.rmSync(RELEASE_DIR, { recursive: true, force: true })
   run('npm', ['run', 'build'])
-  run('npx', ['electron-builder', ...(WINDOWS ? ['--win'] : ['--linux', '--win']), '--publish', 'never'],
-    WINDOWS ? '' : `Jeśli wyżej jest błąd wine (przy budowaniu Orlog-Setup), doinstaluj 32-bitowe Wine:\n  ${WINE_INSTALL}`)
+  run('node', ['scripts/electron-builder.mjs', ...(WINDOWS ? ['--win'] : ['--linux', '--win']), '--publish', 'never'])
 
   const files = fs.readdirSync(RELEASE_DIR)
     .filter(name => /\.(AppImage|deb|exe|blockmap)$/.test(name) || /^latest.*\.yml$/.test(name))

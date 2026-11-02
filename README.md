@@ -39,7 +39,7 @@ npm run app          # buduje frontend i otwiera go w oknie aplikacji
 npm run app:dev      # okno z serwerem Vite (w drugim terminalu: npm run dev), zmiany widać od razu
 npm run dist         # instalator na system, na którym budujesz (wyniki w frontend/release/)
 npm run dist:linux   # AppImage i .deb
-npm run dist:win     # instalator i przenośny .exe (na Linuksie potrzebne Wine, zob. niżej)
+npm run dist:win     # instalator i przenośny .exe (też na Linuksie)
 npm run wydanie -- 1.0.1   # nowa wersja dla graczy, zob. „Wydanie nowej wersji”
 ```
 
@@ -66,19 +66,11 @@ Skrypt (`frontend/scripts/wydanie.mjs`) ustawia wersję w `package.json` i buduj
 
 Numer musi być wyższy niż w ostatnim wydaniu, bo aplikacje pobierają tylko nowsze wersje; skrypt sprawdza to przed budowaniem. Tag wydania wskazuje na ostatni commit, więc najlepiej najpierw zrobić `git push`. Na Windowsie skrypt zbuduje tylko pliki na Windowsa.
 
-Jednorazowe przygotowanie na Linuksie (Ubuntu, Lubuntu itp.):
+Do wysyłania potrzebny jest jednorazowo dostęp do repozytorium na GitHubie:
+- najprościej przez [GitHub CLI](https://cli.github.com/): `sudo apt install gh`, a potem `gh auth login`,
+- albo token: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens, dostęp do repozytorium Orlog z uprawnieniem „Contents: Read and write”. Potem `export GH_TOKEN=...` przed `npm run wydanie`.
 
-1. Wine. Instalator na Windowsa budowany na Linuksie musi raz uruchomić program Windowsa (tworzy deinstalator), więc potrzebne jest Wine, razem z wersją 32-bitową:
-
-   ```bash
-   sudo dpkg --add-architecture i386
-   sudo apt update
-   sudo apt install wine wine32:i386
-   ```
-
-2. Dostęp do repozytorium na GitHubie, żeby skrypt mógł wysłać pliki:
-   - najprościej przez [GitHub CLI](https://cli.github.com/): `sudo apt install gh`, a potem `gh auth login`,
-   - albo token: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens, dostęp do repozytorium Orlog z uprawnieniem „Contents: Read and write”. Potem `export GH_TOKEN=...` przed `npm run wydanie`.
+Wine nie jest potrzebne. Zwykle electron-builder na Linuksie uruchamia przez Wine pomocniczy program, który tworzy deinstalator do instalatora `.exe`. Tutaj `scripts/electron-builder.mjs` podsuwa mu zamiast Wine `scripts/nsis-bez-wine.cjs`, który wyciąga deinstalator prosto z pliku, tak samo jak electron-builder robi to na macOS. Wszystkie `npm run dist*` idą przez ten skrypt. Gdyby kiedyś trzeba było prawdziwego Wine, wystarczy ustawić `USE_SYSTEM_WINE=true`.
 
 Adres serwera wbudowany w aplikację ustawia plik `frontend/.env.production.local` (nie trafia do repo):
 
@@ -90,7 +82,8 @@ Skrypt przed budowaniem wypisuje, jaki adres trafi do aplikacji. Bez tego pliku 
 
 Workflow `.github/workflows/build.yml` niczego nie wydaje, tylko sprawdza każdy PR i push na `main`:
 - uruchamia testy serwera, buduje obraz Dockera i sprawdza, czy serwer w kontenerze odpowiada,
-- buduje aplikację na Linuksie (z Wine) tak samo jak `npm run wydanie`, uruchamia ją na próbę (zwykłą i AppImage), a potem na Windowsie instaluje zbudowany na Linuksie instalator i uruchamia zainstalowaną grę oraz przenośny `.exe`,
+- buduje aplikację na Linuksie (bez Wine) tak samo jak `npm run wydanie` i uruchamia ją na próbę (zwykłą i AppImage),
+- na Windowsie instaluje zbudowany na Linuksie instalator, uruchamia zainstalowaną grę i przenośny `.exe`, a na końcu odinstalowuje grę,
 - sprawdza, czy aplikacja znajduje i pobiera aktualizację (udawane wydanie 99.0.0 na lokalnym serwerze).
 
 ### Aktualizacje

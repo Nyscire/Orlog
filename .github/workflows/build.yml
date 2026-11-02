@@ -62,16 +62,11 @@ jobs:
       - name: Zależności
         run: npm ci --no-audit --no-fund
 
-      # instalator na Windowsa budowany na Linuksie potrzebuje Wine (tak samo jak w README)
-      - name: Wine
-        run: |
-          sudo dpkg --add-architecture i386
-          sudo apt-get update -q
-          sudo apt-get install -y -q wine wine32:i386 > /dev/null
-          wine --version
-
+      # instalator na Windowsa powstaje bez Wine (scripts/electron-builder.mjs), więc go tu nie ma
       - name: Instalatory (npm run wydanie bez wysyłania)
-        run: npm run wydanie -- --bez-wysylania
+        run: |
+          if command -v wine > /dev/null; then echo "Wine nie powinno być w systemie: $(command -v wine)"; exit 1; fi
+          npm run wydanie -- --bez-wysylania
 
       - name: Test uruchomienia
         run: xvfb-run -a release/linux-unpacked/orlog --no-sandbox --disable-gpu --smoke-test=smoke-linux.png
@@ -160,6 +155,16 @@ jobs:
 
       - name: Test aktualizacji
         run: bash scripts/proba-aktualizacji.sh latest.yml "$ORLOG_EXE"
+
+      # deinstalator to jedyna część instalatora, którą na Linuksie robi się inaczej niż na Windowsie
+      - name: Odinstalowanie
+        run: |
+          dir=$(dirname "$ORLOG_EXE")
+          ls "$dir"
+          MSYS_NO_PATHCONV=1 "$dir/Uninstall Orlog.exe" /S
+          # deinstalator kopiuje się do katalogu tymczasowego i kończy pracę stamtąd
+          for i in $(seq 1 60); do [ ! -e "$ORLOG_EXE" ] && { echo "odinstalowano"; exit 0; }; sleep 1; done
+          echo "gra dalej jest zainstalowana"; ls -la "$dir"; exit 1
 
       - uses: actions/upload-artifact@v4
         with:

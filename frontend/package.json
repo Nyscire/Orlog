@@ -17,9 +17,9 @@
     "preview": "vite preview",
     "app": "vite build && electron .",
     "app:dev": "electron . --dev-url=http://localhost:5173",
-    "dist": "vite build && electron-builder --publish never",
-    "dist:linux": "vite build && electron-builder --linux --publish never",
-    "dist:win": "vite build && electron-builder --win --publish never",
+    "dist": "vite build && node scripts/electron-builder.mjs --publish never",
+    "dist:linux": "vite build && node scripts/electron-builder.mjs --linux --publish never",
+    "dist:win": "vite build && node scripts/electron-builder.mjs --win --publish never",
     "wydanie": "node scripts/wydanie.mjs"
   },
   "dependencies": {
