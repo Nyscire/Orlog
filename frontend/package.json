@@ -19,7 +19,8 @@
     "app:dev": "electron . --dev-url=http://localhost:5173",
     "dist": "vite build && electron-builder --publish never",
     "dist:linux": "vite build && electron-builder --linux --publish never",
-    "dist:win": "vite build && electron-builder --win --publish never"
+    "dist:win": "vite build && electron-builder --win --publish never",
+    "wydanie": "node scripts/wydanie.mjs"
   },
   "dependencies": {
     "electron-updater": "6.8.10"
