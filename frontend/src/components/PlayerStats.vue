@@ -1,6 +1,9 @@
 <template>
   <div class="player-stats">
-    <div class="player-name">{{ name }}</div>
+    <div class="player-name">
+      {{ name }}
+      <span v-if="rating != null" class="rating" :title="$t('ranking.rating')">{{ rating }}</span>
+    </div>
     <div class="stats">
       <div class="stat hp" :class="hpLevel" :title="$t('stats.hpTitle', { hp: hp, max: maxHp })">
         <span class="label">{{ $t('stats.hp') }}</span>
@@ -22,6 +25,11 @@
 export default {
   props: {
   name: String,
+  // ranking gracza z kontem (gość nie ma)
+  rating: {
+    type: Number,
+    default: null
+  },
   hp: Number,
   mana: Number,
   pendingMana: {
@@ -60,6 +68,16 @@ computed: {
   font-weight: 700;
   font-size: 1.15rem;
   margin-right: 0.25rem;
+}
+.rating {
+  margin-left: 0.3rem;
+  padding: 0 0.45rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  vertical-align: 2px;
+  color: var(--on-accent);
+  background: var(--gold);
+  border-radius: 999px;
 }
 .stats {
   display: flex;

@@ -1,6 +1,7 @@
 # Serwer gry w Dockerze. Z katalogu głównego repo:
 #   docker compose -f deploy/docker-compose.yml up -d --build
 # Aktualizacja po git pull: to samo polecenie jeszcze raz.
+# Konta i wyniki partii są w wolumenie orlog-data, więc aktualizacja ich nie kasuje.
 services:
   orlog:
     build: ../backend
@@ -8,3 +9,15 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"
+    volumes:
+      - orlog-data:/data
+    # poczta do resetu hasła (bez niej kody trafiają do logu: docker compose logs orlog)
+    # environment:
+    #   ORLOG_SMTP_HOST: smtp.example.com
+    #   ORLOG_SMTP_PORT: "587"
+    #   ORLOG_SMTP_USER: orlog@example.com
+    #   ORLOG_SMTP_PASSWORD: haslo-do-poczty
+    #   ORLOG_SMTP_FROM: "Orlog <orlog@example.com>"
+
+volumes:
+  orlog-data:

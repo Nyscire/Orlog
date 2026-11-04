@@ -201,12 +201,20 @@ export const en = {
     finished: '{players} · game over',
     needSetup: 'Enter your name and choose gods to take a seat.',
     full: 'The server already has the maximum of {max} tables. Take a seat at one from the list.',
-    leave: 'Leave the table'
+    leave: 'Leave the table',
+    mode: 'Game type',
+    normal: 'Normal',
+    ranked: 'Ranked',
+    normalHint: "Doesn't affect the ranking. Guests can join too.",
+    rankedHint: "The result changes both players' rating. Signed-in players only.",
+    rankedLogin: 'Ranked games are for signed-in players.',
+    loginToJoin: 'Signed-in only'
   },
 
   board: {
     selfOffline: 'Lost connection to the server. Reconnecting…',
     opponentOffline: 'is offline. The game will wait until they come back. You can also leave the table.',
+    opponentOfflineRanked: "is offline. If they don't come back within {s} s, you win by forfeit.",
     endGame: 'Leave the table'
   },
 
@@ -227,6 +235,8 @@ export const en = {
     settings: 'Settings',
     leave: 'Leave table',
     leaveConfirm: 'Leave the table? The game will end.',
+    leaveConfirmRanked: 'Leaving a ranked game counts as a loss by forfeit. Leave?',
+    ratingChange: 'Rating: {before} → {after} ({delta})',
     leaveYes: 'Yes, leave',
     tableCode: 'Table code: {code}',
     no: 'No',
@@ -367,7 +377,8 @@ export const en = {
           : `The defence blocks everything, ${p.defender} still has ${p.hp} HP.`
         return `${p.attacker} attacks: ${parts.join(', ')}. ${outcome}`
       },
-      win: p => `Game over. ${p.winner} wins.`
+      win: p => `Game over. ${p.winner} wins.`,
+      forfeit: p => `${p.loser} left the game. ${p.winner} wins by forfeit.`
     }
   },
 
@@ -428,6 +439,81 @@ export const en = {
     }
   },
 
+  account: {
+    login: 'Sign in',
+    register: 'Create account',
+    loginTitle: 'Sign in',
+    registerTitle: 'New account',
+    registerLead: 'Your account keeps your results, match history and god stats, and lets you play ranked games.',
+    loginOrEmail: 'Username or email',
+    loginLabel: 'Username',
+    loginHint: '3–20 characters: letters, digits, dot, dash, underscore. Other players see it.',
+    email: 'Email',
+    emailHint: 'Only for recovering your password. Nobody else sees it.',
+    password: 'Password',
+    passwordRepeat: 'Repeat password',
+    passwordMismatch: "The passwords don't match.",
+    newPassword: 'New password',
+    loginButton: 'Sign in',
+    registerButton: 'Create account',
+    wait: 'One moment…',
+    forgot: 'Forgot your password?',
+    noAccount: 'No account yet? Create one',
+    haveAccount: 'Already have an account? Sign in',
+    resetTitle: 'New password',
+    resetLead: "Enter your username or email. We'll email you a six-digit code for setting a new password.",
+    sendCode: 'Send code',
+    codeSent: 'If the account exists, the code is on its way to its email (check spam too). The code works for 15 minutes.',
+    code: 'Code from the email',
+    setPassword: 'Set password and sign in',
+    resend: 'Send the code again',
+    backToLogin: 'Back to sign in',
+    signedInAs: 'Signed in as',
+    profile: 'Profile',
+    logout: 'Sign out',
+    expired: 'Your session has expired. Sign in again to play on your account.'
+  },
+
+  profile: {
+    myTab: 'My profile',
+    playerTab: 'Player {name}',
+    loading: 'Loading…',
+    missing: 'There is no player {name}.',
+    since: 'Playing since {date}',
+    position: ({ n }) => `#${n} in the ranking`,
+    noRanked: 'no ranked games yet',
+    peak: 'best {n}',
+    games: 'Games',
+    wins: 'Wins',
+    losses: 'Losses',
+    winRate: 'Win rate',
+    ranked: 'Ranked',
+    normal: 'Normal',
+    record: ({ games, wins, losses }) => `${games} (${wins}–${losses})`,
+    godsTitle: 'Gods',
+    gamesShort: ({ n }) => `${n} ${n === 1 ? 'game' : 'games'}`,
+    godRecord: 'Won {wins} of {games}',
+    historyTitle: 'Recent games',
+    noGames: 'No games yet.',
+    win: 'Win',
+    loss: 'Loss',
+    vs: 'vs',
+    guest: 'guest',
+    forfeit: 'forfeit',
+    rounds: ({ n }) => `${n} ${n === 1 ? 'round' : 'rounds'}`,
+    more: 'Show older'
+  },
+
+  ranking: {
+    title: 'Ranking',
+    lead: 'Only ranked games change the rating. Everyone starts at 1000, and beating a stronger opponent gives more.',
+    empty: 'Nobody has played a ranked game yet.',
+    player: 'Player',
+    rating: 'Rating',
+    record: 'W–L',
+    games: 'Games'
+  },
+
   update: {
     readyTitle: 'Version {version} is ready',
     readyText: 'It installs when you close the game, or now after a restart.',
@@ -465,6 +551,20 @@ export const en = {
     join_first: 'Join the game first.',
     already_seated: 'You already have a seat as {name}.',
     player_left: '{name} left the table. Wait for a new opponent or go back to the table list.',
+    opponent_forfeit: '{name} left the ranked game, so you win by forfeit. Wait for a new opponent or go back to the table list.',
+    login_invalid: 'The username must have {min}–{max} characters: letters, digits, dot, dash or underscore.',
+    login_taken: 'This username is already taken.',
+    email_invalid: "That doesn't look like an email address.",
+    email_taken: 'There is already an account with this email. You can recover its password.',
+    password_too_short: 'The password must have at least {min} characters.',
+    password_too_long: 'The password can have at most {max} characters.',
+    bad_credentials: 'Wrong username or password.',
+    too_many_attempts: 'Too many failed attempts. Try again in {minutes} min.',
+    reset_code_invalid: 'The code is wrong or has expired. Send a new one.',
+    leave_table_first: 'Leave the table first.',
+    ranked_login_required: 'Ranked games are for signed-in players only.',
+    name_reserved: 'This name belongs to a registered player. If that is you, sign in.',
+    account_busy: 'You are already playing on this account at another table or in another window.',
     table_not_found: 'This table is gone or its host is offline.',
     table_full: 'There is no free seat at this table.',
     too_many_tables: 'The server already has {max} tables. Take a seat at one from the list.',

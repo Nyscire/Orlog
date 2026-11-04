@@ -1,3 +1,7 @@
 tests/
 __pycache__/
 *.pyc
+# baza z kontami żyje w wolumenie, nie w obrazie
+*.db
+*.db-shm
+*.db-wal
