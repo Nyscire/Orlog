@@ -1,11 +1,11 @@
-# Testy serwera, obraz Dockera i instalatory aplikacji (Windows, Linux).
-# Przy tagu v* (np. v1.0.0) powstaje szkic wydania z instalatorami w zakładce Releases.
+# Sprawdzanie PR-ów i pushy na main: testy serwera, obraz Dockera i próbne zbudowanie aplikacji.
+# Wydań tu nie ma: nową wersję wydaje się z własnego komputera przez npm run wydanie
+# (frontend/scripts/wydanie.mjs), a ten workflow tylko sprawdza, że to się zbuduje i uruchomi.
 name: Budowanie
 
 on:
   push:
     branches: [main]
-    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -43,17 +43,13 @@ jobs:
           docker logs orlog
           exit 1
 
+  # tak samo jak przy wydaniu z komputera: wszystko budowane na Linuksie, także pliki na Windowsa
   app:
-    name: Aplikacja (${{ matrix.os }})
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-    runs-on: ${{ matrix.os }}
+    name: Aplikacja (budowanie na Linuksie)
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: frontend
-        shell: bash
     steps:
       - uses: actions/checkout@v4
 
@@ -66,99 +62,112 @@ jobs:
       - name: Zależności
         run: npm ci --no-audit --no-fund
 
-      # przy tagu v1.2.3 aplikacja dostaje wersję 1.2.3 (tak samo nazywa się wydanie)
-      - name: Wersja z tagu
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: npm version "${GITHUB_REF_NAME#v}" --no-git-tag-version --allow-same-version
+      # instalator na Windowsa powstaje bez Wine (scripts/electron-builder.mjs), więc go tu nie ma
+      - name: Instalatory (npm run wydanie bez wysyłania)
+        run: |
+          if command -v wine > /dev/null; then echo "Wine nie powinno być w systemie: $(command -v wine)"; exit 1; fi
+          npm run wydanie -- --bez-wysylania
 
-      - name: Frontend
-        run: npm run build
-        env:
-          # adres serwera wbudowany w aplikację: zmienna repozytorium ORLOG_SERVER_URL
-          # (Settings → Secrets and variables → Actions → Variables); bez niej gracz wpisuje adres sam
-          VITE_BACKEND_URL: ${{ vars.ORLOG_SERVER_URL }}
-
-      - name: Instalatory
-        run: npx electron-builder --publish never
-
-      - name: Test uruchomienia (Linux)
-        if: runner.os == 'Linux'
+      - name: Test uruchomienia
         run: xvfb-run -a release/linux-unpacked/orlog --no-sandbox --disable-gpu --smoke-test=smoke-linux.png
 
-      - name: Test uruchomienia (Windows)
-        if: runner.os == 'Windows'
-        run: release/win-unpacked/Orlog.exe --disable-gpu --smoke-test=smoke-windows.png
+      - name: Test AppImage
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: |
+          chmod +x release/*.AppImage
+          xvfb-run -a release/Orlog-*.AppImage --disable-gpu --smoke-test="$PWD/smoke-linux-appimage.png"
 
-      # pliki do wysłania znajomemu, uruchomione tak jak u niego: bez instalacji
-      - name: Test przenośnego exe (Windows)
-        if: runner.os == 'Windows'
+      - name: Test aktualizacji
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1
+        run: bash scripts/proba-aktualizacji.sh latest-linux.yml xvfb-run -a release/Orlog-*.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orlog-linux
+          if-no-files-found: error
+          path: |
+            frontend/release/*.AppImage
+            frontend/release/*.deb
+            frontend/release/latest-linux.yml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: orlog-windows
+          if-no-files-found: error
+          path: |
+            frontend/release/*.exe
+            frontend/release/latest.yml
+            frontend/release/*.blockmap
+
+      # zrzuty ekranu z testów, osobno, żeby nie pobierać całych instalatorów
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zrzut-Linux
+          if-no-files-found: error
+          path: frontend/smoke-*.png
+
+  # pliki na Windowsa zbudowane na Linuksie: instalacja i uruchomienie na prawdziwym Windowsie
+  windows:
+    name: Aplikacja (test na Windowsie)
+    needs: app
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: frontend
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: orlog-windows
+          path: frontend/release
+
+      - name: Instalacja
+        run: |
+          ls -la release
+          # bez okien instalatora; MSYS_NO_PATHCONV, żeby bash nie zamienił /S na ścieżkę
+          MSYS_NO_PATHCONV=1 ./release/Orlog-Setup-*.exe /S
+          programs="$(cygpath -u "$LOCALAPPDATA")/Programs"
+          exe=
+          for i in $(seq 1 60); do
+            exe=$(find "$programs" -maxdepth 2 -name Orlog.exe 2> /dev/null | head -n 1)
+            [ -n "$exe" ] && break
+            sleep 1
+          done
+          if [ -z "$exe" ]; then echo "instalator nie zainstalował gry"; ls -la "$programs" || true; exit 1; fi
+          sleep 3
+          ls "$(dirname "$exe")"
+          echo "ORLOG_EXE=$exe" >> "$GITHUB_ENV"
+
+      - name: Test uruchomienia
+        run: '"$ORLOG_EXE" --disable-gpu --smoke-test="$PWD/smoke-windows.png"'
+
+      # plik do wysłania znajomemu, uruchomiony tak jak u niego: bez instalacji
+      - name: Test przenośnego exe
         run: |
           ./release/Orlog-*-portable.exe --disable-gpu --smoke-test="$PWD/smoke-windows-portable.png"
           # przenośny exe najpierw się rozpakowuje, więc zrzut może pojawić się chwilę później
           for i in $(seq 1 60); do [ -f smoke-windows-portable.png ] && exit 0; sleep 1; done
           echo "brak zrzutu z przenośnego exe"; exit 1
 
-      - name: Test AppImage (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          chmod +x release/*.AppImage
-          APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a release/Orlog-*.AppImage --disable-gpu --smoke-test="$PWD/smoke-linux-appimage.png"
-
-      # udajemy nowsze wydanie (ten sam plik, wyższy numer w latest*.yml) i sprawdzamy,
-      # czy zainstalowana aplikacja je znajdzie i pobierze
       - name: Test aktualizacji
+        run: bash scripts/proba-aktualizacji.sh latest.yml "$ORLOG_EXE"
+
+      # deinstalator to jedyna część instalatora, którą na Linuksie robi się inaczej niż na Windowsie
+      - name: Odinstalowanie
         run: |
-          if [ "$RUNNER_OS" = "Windows" ]; then yml=latest.yml; else yml=latest-linux.yml; fi
-          mkdir -p update-feed
-          sed 's/^version: .*/version: 99.0.0/' "release/$yml" > "update-feed/$yml"
-          grep -E '^ *(- )?url:|^path:' "update-feed/$yml" | sed 's/.*: *//' | sort -u | while read -r f; do cp "release/$f" update-feed/; done
-          ls update-feed
-          python -m http.server 8099 --bind 127.0.0.1 --directory update-feed > feed.log 2>&1 &
-          sleep 2
-          export ORLOG_UPDATE_URL=http://127.0.0.1:8099
-          if [ "$RUNNER_OS" = "Windows" ]; then
-            release/win-unpacked/Orlog.exe --update-test --disable-gpu
-          else
-            chmod +x release/*.AppImage
-            APPIMAGE_EXTRACT_AND_RUN=1 xvfb-run -a release/Orlog-*.AppImage --update-test --disable-gpu
-          fi
+          dir=$(dirname "$ORLOG_EXE")
+          ls "$dir"
+          MSYS_NO_PATHCONV=1 "$dir/Uninstall Orlog.exe" /S
+          # deinstalator kopiuje się do katalogu tymczasowego i kończy pracę stamtąd
+          for i in $(seq 1 60); do [ ! -e "$ORLOG_EXE" ] && { echo "odinstalowano"; exit 0; }; sleep 1; done
+          echo "gra dalej jest zainstalowana"; ls -la "$dir"; exit 1
 
       - uses: actions/upload-artifact@v4
         with:
-          name: orlog-${{ runner.os }}
-          if-no-files-found: error
-          path: |
-            frontend/release/*.AppImage
-            frontend/release/*.deb
-            frontend/release/*.exe
-            frontend/release/latest*.yml
-            frontend/release/*.blockmap
-
-      # zrzut ekranu z testu uruchomienia, osobno, żeby nie pobierać całych instalatorów
-      - uses: actions/upload-artifact@v4
-        with:
-          name: zrzut-${{ runner.os }}
+          name: zrzut-Windows
           if-no-files-found: error
           path: frontend/smoke-*.png
-
-  release:
-    name: Wydanie
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [server, app]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Szkic wydania z instalatorami
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          # latest*.yml i *.blockmap są potrzebne aplikacjom do aktualizacji
-          shopt -s nullglob
-          files=(artifacts/*/*.AppImage artifacts/*/*.deb artifacts/*/*.exe artifacts/*/latest*.yml artifacts/*/*.blockmap)
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft --generate-notes \
-            --title "Orlog ${GITHUB_REF_NAME#v}" "${files[@]}"

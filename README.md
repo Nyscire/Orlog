@@ -39,7 +39,8 @@ npm run app          # buduje frontend i otwiera go w oknie aplikacji
 npm run app:dev      # okno z serwerem Vite (w drugim terminalu: npm run dev), zmiany widać od razu
 npm run dist         # instalator na system, na którym budujesz (wyniki w frontend/release/)
 npm run dist:linux   # AppImage i .deb
-npm run dist:win     # instalator .exe (najprościej budować na Windowsie albo w GitHub Actions)
+npm run dist:win     # instalator i przenośny .exe (też na Linuksie)
+npm run wydanie -- 1.0.1   # nowa wersja dla graczy, zob. „Wydanie nowej wersji”
 ```
 
 Adres serwera aplikacja bierze z ustawień gry. Uruchomiona z kodu (`npm run app`) od razu łączy się z serwerem na tym samym komputerze (`127.0.0.1:5000`). Zainstalowana bez wbudowanego adresu otwiera ustawienia przy pierwszym starcie. Domyślny adres można wbudować przy budowaniu: `VITE_BACKEND_URL=https://orlog.example.com npm run dist`. Bez numeru portu gra łączy się z portem 5000 (`1.2.3.4` → `http://1.2.3.4:5000`), a `localhost` zamienia na `127.0.0.1`, bo serwer domyślnie słucha tylko na IPv4.
@@ -48,13 +49,42 @@ Drugi gracz na tym samym komputerze: „Nowe okno” w stopce menu, przycisk w u
 
 Skróty w aplikacji: F11 to pełny ekran, Ctrl + plus/minus/0 to powiększenie, a F5 albo Ctrl+R przeładowanie. Narzędzia deweloperskie (F12) są w wersji z `npm run app`, a w zainstalowanej po uruchomieniu z `--devtools`. Jeśli na Ubuntu aplikacja z `npm run app` nie startuje z błędem o „SUID sandbox”, uruchom ją przez `npm run app -- --no-sandbox`.
 
-### Instalatory z GitHuba
+### Wydanie nowej wersji
 
-Workflow `.github/workflows/build.yml` przy każdym PR i pushu na `main`:
+Wydanie robi się z własnego komputera, bez GitHub Actions:
+
+```bash
+cd frontend
+npm run wydanie -- 1.0.1
+```
+
+Skrypt (`frontend/scripts/wydanie.mjs`) ustawia wersję w `package.json` i buduje wszystkie pliki: na Linuksie AppImage, `.deb`, instalator i przenośny `.exe`. Potem wrzuca je do wydania `v1.0.1` w zakładce Releases i od razu je publikuje. Pliki trafiają najpierw do szkicu, więc gracze widzą wydanie dopiero z kompletem plików. Na koniec skrypt przypomina, żeby zapisać nowy numer wersji (`git commit` i `git push`).
+
+- `npm run wydanie` bez numeru bierze wersję z `package.json`.
+- `--szkic` zostawia wydanie jako szkic, żeby obejrzeć je przed „Publish release”.
+- `--bez-wysylania` tylko buduje do `frontend/release/`.
+
+Numer musi być wyższy niż w ostatnim wydaniu, bo aplikacje pobierają tylko nowsze wersje; skrypt sprawdza to przed budowaniem. Tag wydania wskazuje na ostatni commit, więc najlepiej najpierw zrobić `git push`. Na Windowsie skrypt zbuduje tylko pliki na Windowsa.
+
+Do wysyłania potrzebny jest jednorazowo dostęp do repozytorium na GitHubie:
+- najprościej przez [GitHub CLI](https://cli.github.com/): `sudo apt install gh`, a potem `gh auth login`,
+- albo token: GitHub → Settings → Developer settings → Personal access tokens → Fine-grained tokens, dostęp do repozytorium Orlog z uprawnieniem „Contents: Read and write”. Potem `export GH_TOKEN=...` przed `npm run wydanie`.
+
+Wine nie jest potrzebne. Zwykle electron-builder na Linuksie uruchamia przez Wine pomocniczy program, który tworzy deinstalator do instalatora `.exe`. Tutaj `scripts/electron-builder.mjs` podsuwa mu zamiast Wine `scripts/nsis-bez-wine.cjs`, który wyciąga deinstalator prosto z pliku, tak samo jak electron-builder robi to na macOS. Wszystkie `npm run dist*` idą przez ten skrypt. Gdyby kiedyś trzeba było prawdziwego Wine, wystarczy ustawić `USE_SYSTEM_WINE=true`.
+
+Adres serwera wbudowany w aplikację ustawia plik `frontend/.env.production.local` (nie trafia do repo):
+
+```
+VITE_BACKEND_URL=https://orlog.example.com
+```
+
+Skrypt przed budowaniem wypisuje, jaki adres trafi do aplikacji. Bez tego pliku gracz wpisuje adres w ustawieniach przy pierwszym starcie.
+
+Workflow `.github/workflows/build.yml` niczego nie wydaje, tylko sprawdza każdy PR i push na `main`:
 - uruchamia testy serwera, buduje obraz Dockera i sprawdza, czy serwer w kontenerze odpowiada,
-- buduje aplikację na Windowsie i Linuksie, uruchamia na próbę zarówno zbudowaną aplikację, jak i pliki do wysłania (przenośny exe, AppImage), a zrzuty ekranu i instalatory zapisuje jako artefakty.
-
-Wydanie: `git tag v1.0.0 && git push origin v1.0.0` (numer zgodny z `version` w `frontend/package.json`). Instalatory trafiają do szkicu wydania w zakładce Releases; wystarczy go opublikować. Adres serwera wbudowany w instalatory ustawia zmienna repozytorium `ORLOG_SERVER_URL` (Settings → Secrets and variables → Actions → Variables).
+- buduje aplikację na Linuksie (bez Wine) tak samo jak `npm run wydanie` i uruchamia ją na próbę (zwykłą i AppImage),
+- na Windowsie instaluje zbudowany na Linuksie instalator, uruchamia zainstalowaną grę i przenośny `.exe`, a na końcu odinstalowuje grę,
+- sprawdza, czy aplikacja znajduje i pobiera aktualizację (udawane wydanie 99.0.0 na lokalnym serwerze).
 
 ### Aktualizacje
 
@@ -64,7 +94,7 @@ Zainstalowana aplikacja przy starcie i co godzinę sprawdza, czy na GitHubie jes
 - przenośny `.exe` nie potrafi się podmienić, więc pasek pokazuje tylko „Pobierz” z linkiem do strony z wydaniami.
 - aplikacja uruchomiona z kodu (`npm run app`) niczego nie sprawdza.
 
-Nowa wersja dla graczy: `git tag v1.0.1 && git push origin v1.0.1`, a potem „Publish release” przy szkicu w zakładce Releases. Numer wersji aplikacji CI bierze z tagu, więc nie trzeba go zmieniać w `package.json`. Aplikacje widzą tylko opublikowane wydania (szkic jeszcze nie), a do aktualizacji potrzebują plików `latest.yml` i `latest-linux.yml`, które CI dokłada do wydania razem z instalatorami.
+Aplikacje widzą tylko opublikowane wydania (szkic jeszcze nie). Do aktualizacji potrzebują plików `latest.yml` i `latest-linux.yml`, które `npm run wydanie` wysyła razem z instalatorami.
 
 ### Jeden plik do wysłania
 
@@ -72,7 +102,7 @@ Bez instalacji, np. dla znajomego:
 - Windows: `Orlog-1.0.0-portable.exe`. Uruchamia się dwuklikiem; pierwsze uruchomienie trwa kilka sekund dłużej, bo plik się rozpakowuje.
 - Linux: `Orlog-1.0.0.AppImage`. Wystarczy nadać prawo do uruchamiania (`chmod +x Orlog-1.0.0.AppImage` albo we właściwościach pliku) i kliknąć. Na Ubuntu 24.04 i nowszych AppImage może nie wystartować przez ograniczenia AppArmor; wtedy `./Orlog-1.0.0.AppImage --no-sandbox` albo instalacja z `.deb`.
 
-Oba pliki powstają razem z instalatorami (`npm run dist:win`, `npm run dist:linux`, a przy tagu `v*` trafiają do wydania na GitHubie). Plik to tylko aplikacja: znajomy musi mieć dostęp do serwera gry. Adres wbudowany przy budowaniu (`VITE_BACKEND_URL` albo zmienna `ORLOG_SERVER_URL` w GitHub Actions) sprawia, że nic nie musi wpisywać; bez niego wpisuje adres w ustawieniach przy pierwszym starcie.
+Oba pliki powstają razem z instalatorami (`npm run dist:win`, `npm run dist:linux`), a `npm run wydanie` wrzuca je do wydania na GitHubie. Plik to tylko aplikacja: znajomy musi mieć dostęp do serwera gry. Adres wbudowany przy budowaniu (`VITE_BACKEND_URL`, np. w `frontend/.env.production.local`) sprawia, że nic nie musi wpisywać; bez niego wpisuje adres w ustawieniach przy pierwszym starcie.
 
 Instalatory nie są podpisane, więc Windows przy pierwszym uruchomieniu pokaże ostrzeżenie SmartScreen („Więcej informacji” → „Uruchom mimo to”). Na Linuksie najprościej zainstalować `.deb` (`sudo apt install ./Orlog-1.0.0.deb`); AppImage wymaga biblioteki `libfuse2`.
 
