@@ -3,6 +3,7 @@
     <div class="player-header">
       <PlayerStats 
         :name="player.name" 
+        :rating="player.rating ?? null"
         :hp="player.HP"
         :mana="player.Mana"
         :pending-mana="pendingMana"

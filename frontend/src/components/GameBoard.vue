@@ -15,6 +15,8 @@
       @leave="leaveTable"
       @help="showHelp = true"
       @settings="showSettings = true"
+      @account="mode => (accountMode = mode)"
+      @stats="openStats"
     />
 
     <!-- v-else musi stać zaraz po StartMenu, inaczej dowiąże się do innego v-if -->
@@ -27,6 +29,10 @@
 
       <div v-if="!connected" class="status-banner warn">
         {{ $t('board.selfOffline') }}
+      </div>
+      <!-- w partii rankingowej wyjście to przegrana, więc zamiast przycisku: walkower po czasie -->
+      <div v-else-if="opponentOffline && rankedInProgress" class="status-banner">
+        <span><strong>{{ opponent.name }}</strong> {{ $t('board.opponentOfflineRanked', { s: data.table.forfeit_grace }) }}</span>
       </div>
       <div v-else-if="opponentOffline" class="status-banner">
         <span><strong>{{ opponent.name }}</strong> {{ $t('board.opponentOffline') }}</span>
@@ -48,6 +54,7 @@
           :winner="data.winner"
           :round="data.round"
           :table="data.table || null"
+          :result="data.result || null"
           :log="data.log || []"
           :opponent="opponent"
           :player="player"
@@ -80,6 +87,8 @@
 
     <HelpDialog v-if="showHelp" @close="showHelp = false" />
     <SettingsDialog v-if="showSettings" :focus-server="!hasServer" @close="showSettings = false" />
+    <AccountDialog v-if="accountMode" :mode="accountMode" @close="accountMode = ''" />
+    <StatsDialog v-if="statsTab" :initial-tab="statsTab" @close="statsTab = ''" />
     <UpdateBanner />
   </div>
 </template>
@@ -90,6 +99,8 @@ import StartMenu from './StartMenu.vue';
 import HelpDialog from './HelpDialog.vue';
 import SettingsDialog from './SettingsDialog.vue';
 import UpdateBanner from './UpdateBanner.vue';
+import AccountDialog from './AccountDialog.vue';
+import StatsDialog from './StatsDialog.vue';
 import { errorText } from '../i18n';
 import { isApp, serverUrl } from '../server';
 
@@ -123,6 +134,8 @@ export default {
     HelpDialog,
     SettingsDialog,
     UpdateBanner,
+    AccountDialog,
+    StatsDialog,
     OpponentSection,
     NeutralZone,
     PlayerSection
@@ -137,6 +150,10 @@ export default {
       connected: socket.connected,
       showHelp: false,
       showSettings: false,
+      // okno konta: 'login', 'register' albo '' (zamknięte)
+      accountMode: '',
+      // okno statystyk: 'profile', 'ranking' albo ''
+      statsTab: '',
       selectedDiceIndexes: [],
       // łaska wybierana w fazie bogów: { god, name, level, needs, max, amount, own, opponent }
       pick: null,
@@ -157,6 +174,9 @@ export default {
     },
     opponentOffline() {
       return this.opponent.connected === false
+    },
+    rankedInProgress() {
+      return !!this.data.table?.ranked && !['waiting', 'finished'].includes(this.data.stage)
     },
     player() {
       return this.data.players?.find(p => p.name === this.playerName) || {}
@@ -257,9 +277,12 @@ export default {
     errorText(error) {
       return errorText(error);
     },
-    createTable({ name, gods, tableName }) {
+    createTable({ name, gods, tableName, ranked }) {
       this.joinError = '';
-      socket.emit('create_table', { name, gods, table_name: tableName });
+      socket.emit('create_table', { name, gods, table_name: tableName, ranked: !!ranked });
+    },
+    openStats(tab) {
+      this.statsTab = tab || 'profile';
     },
     joinTable({ name, gods, table }) {
       this.joinError = '';

@@ -23,18 +23,41 @@
     <!-- lista stołów: po lewej gracz i bogowie, po prawej stoły -->
     <section v-if="!seated" class="panel lobby-panel">
       <div v-if="notice" class="notice">{{ notice }}</div>
+      <div v-else-if="sessionExpired" class="notice">{{ $t('account.expired') }}</div>
 
       <div class="lobby">
         <div class="you">
-          <label class="field-label" for="player-name">{{ $t('menu.yourName') }}</label>
-          <input
-            id="player-name"
-            v-model="name"
-            class="name-input"
-            maxlength="20"
-            :placeholder="$t('menu.namePlaceholder')"
-            autocomplete="off"
-          />
+          <!-- zalogowany gra pod swoim loginem; gość wpisuje imię -->
+          <div v-if="user" class="account-card">
+            <div class="avatar" aria-hidden="true">{{ user.login.charAt(0).toUpperCase() }}</div>
+            <div class="account-text">
+              <span class="field-label">{{ $t('account.signedInAs') }}</span>
+              <strong class="account-login">{{ user.login }}</strong>
+            </div>
+            <span class="rating-chip" :title="$t('ranking.rating')">{{ user.rating }}</span>
+            <div class="account-actions">
+              <button type="button" class="btn btn-ghost small-btn" @click="$emit('stats', 'profile')">{{ $t('account.profile') }}</button>
+              <button type="button" class="link-btn dark" @click="logOut">{{ $t('account.logout') }}</button>
+            </div>
+          </div>
+          <template v-else>
+            <div class="name-row">
+              <label class="field-label" for="player-name">{{ $t('menu.yourName') }}</label>
+              <span class="guest-links">
+                <button type="button" class="link-btn dark" @click="$emit('account', 'login')">{{ $t('account.login') }}</button>
+                <span class="sep">·</span>
+                <button type="button" class="link-btn dark" @click="$emit('account', 'register')">{{ $t('account.register') }}</button>
+              </span>
+            </div>
+            <input
+              id="player-name"
+              v-model="name"
+              class="name-input"
+              maxlength="20"
+              :placeholder="$t('menu.namePlaceholder')"
+              autocomplete="off"
+            />
+          </template>
 
           <div class="gods-header">
             <span class="field-label">{{ $t('menu.godsLabel') }}</span>
@@ -87,6 +110,25 @@
               <span class="tables-count">{{ $t('lobby.count', { n: tables.length }) }}</span>
             </div>
 
+            <div class="mode-row">
+              <div class="mode-switch" role="group" :aria-label="$t('lobby.mode')">
+                <button type="button" :class="{ active: !ranked }" :aria-pressed="!ranked" @click="ranked = false">
+                  {{ $t('lobby.normal') }}
+                </button>
+                <button
+                  type="button"
+                  :class="{ active: ranked }"
+                  :aria-pressed="ranked"
+                  :disabled="!user"
+                  :title="user ? $t('lobby.rankedHint') : $t('lobby.rankedLogin')"
+                  @click="ranked = true"
+                >
+                  {{ $t('lobby.ranked') }}
+                </button>
+              </div>
+              <span class="mode-hint">{{ user ? (ranked ? $t('lobby.rankedHint') : $t('lobby.normalHint')) : $t('lobby.rankedLogin') }}</span>
+            </div>
+
             <form class="create-form" @submit.prevent="createTable">
               <input
                 v-model="tableName"
@@ -109,13 +151,17 @@
               <li v-for="table in tables" :key="table.id" class="table-row" :class="{ open: table.open }">
                 <div class="table-main">
                   <div class="table-title">
+                    <span v-if="table.ranked" class="ranked-chip">{{ $t('lobby.ranked') }}</span>
                     <span class="table-name">{{ tableTitle(table) }}</span>
                     <span class="table-code">#{{ table.id }}</span>
                   </div>
                   <div class="table-meta">{{ tableStatus(table) }}</div>
                 </div>
+                <span v-if="table.open && table.ranked && !user" class="table-busy" :title="$t('lobby.rankedLogin')">
+                  {{ $t('lobby.loginToJoin') }}
+                </span>
                 <button
-                  v-if="table.open"
+                  v-else-if="table.open"
                   type="button"
                   class="btn btn-gold join-btn"
                   :disabled="!canSit"
@@ -139,7 +185,10 @@
     <section v-else class="panel waiting-panel">
       <div class="waiting">
         <div class="waiting-runes" aria-hidden="true"><span>ᚠ</span><span>ᚢ</span><span>ᚦ</span></div>
-        <div v-if="table" class="table-badge">{{ tableTitle(table) }} <span class="table-code">#{{ table.id }}</span></div>
+        <div v-if="table" class="table-badge">
+          <span v-if="table.ranked" class="ranked-chip">{{ $t('lobby.ranked') }}</span>
+          {{ tableTitle(table) }} <span class="table-code">#{{ table.id }}</span>
+        </div>
         <div v-if="notice" class="notice">{{ notice }}</div>
         <h2>{{ $t('menu.waitingTitle') }}</h2>
         <p>{{ $t('menu.playingAs') }} <strong>{{ playerName }}</strong>, {{ $t('menu.withGods', { gods: myGodsText }) }}</p>
@@ -153,6 +202,8 @@
       {{ statusText }}
       <span class="sep">·</span>
       <button class="link-btn" @click="$emit('help')">{{ $t('menu.howToPlay') }}</button>
+      <span class="sep">·</span>
+      <button class="link-btn" @click="$emit('stats', 'ranking')">{{ $t('ranking.title') }}</button>
       <span class="sep">·</span>
       <button class="link-btn" @click="$emit('settings')">{{ $t('menu.settings') }}</button>
       <template v-if="canOpenWindow">
@@ -171,6 +222,7 @@
 import { LANGUAGES, setSetting, settings } from '../settings'
 import { godIcon } from '../dice'
 import { appVersion, canOpenWindow, isApp, openPlayerWindow, serverUrl } from '../server'
+import { account, logOut } from '../account'
 
 const STORAGE_KEY = 'orlog.player'
 
@@ -201,11 +253,12 @@ export default {
     // np. przeciwnik wstał od stołu albo miejsce wygasło
     notice: String
   },
-  emits: ['create-table', 'join-table', 'leave', 'help', 'settings'],
+  emits: ['create-table', 'join-table', 'leave', 'help', 'settings', 'account', 'stats'],
   data() {
     return {
       name: '',
       tableName: '',
+      ranked: false,
       selected: [],
       hovered: null,
       lastPicked: null
@@ -243,8 +296,14 @@ export default {
     canOpenWindow() {
       return canOpenWindow
     },
+    user() {
+      return account.user
+    },
+    sessionExpired() {
+      return account.expired && !account.user
+    },
     canSit() {
-      return this.connected && this.name.trim().length > 0 &&
+      return this.connected && (!!this.user || this.name.trim().length > 0) &&
         this.selected.length >= 1 && this.selected.length <= this.maxGods
     },
     statusText() {
@@ -262,6 +321,10 @@ export default {
       handler() {
         this.normalizeSelection()
       }
+    },
+    // gość nie zakłada stołów rankingowych (np. po wylogowaniu)
+    user(user) {
+      if (!user) this.ranked = false
     }
   },
   mounted() {
@@ -301,34 +364,43 @@ export default {
     newWindow() {
       openPlayerWindow()
     },
+    logOut() {
+      logOut()
+    },
     setLanguage(id) {
       setSetting('locale', id)
     },
     tableTitle(table) {
       return table.name || this.$t('lobby.defaultName', { host: table.host })
     },
+    // przy graczach z kontem ich ranking, np. "Astrid (1016)"
+    withRating(table, name) {
+      const rating = table.ratings?.[name]
+      return rating != null && table.ranked ? `${name} (${rating})` : name
+    },
     tableStatus(table) {
-      const players = table.players.join(' vs ')
-      if (table.stage === 'waiting') return this.$t('lobby.waitingFor', { name: table.players[0] || '' })
+      const players = table.players.map(name => this.withRating(table, name)).join(' vs ')
+      if (table.stage === 'waiting') return this.$t('lobby.waitingFor', { name: this.withRating(table, table.players[0] || '') })
       if (table.stage === 'finished') return this.$t('lobby.finished', { players })
       return this.$t('lobby.playing', { players, round: table.round })
     },
-    // imię i bogowie, z którymi gracz siada przy stole (zapamiętane na następny raz)
+    // imię i bogowie, z którymi gracz siada przy stole (zapamiętane na następny raz);
+    // zalogowany gra pod loginem, a wpisane imię gościa zostaje na później
     player() {
-      const player = { name: this.name.trim(), gods: [...this.selected] }
+      const saved = { name: this.name.trim(), gods: [...this.selected] }
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(player))
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(saved))
       } catch (e) {
         // jak wyżej
       }
-      return player
+      return { ...saved, name: this.user ? this.user.login : saved.name }
     },
     createTable() {
       if (!this.canSit || this.serverFull) return
-      this.$emit('create-table', { ...this.player(), tableName: this.tableName.trim() })
+      this.$emit('create-table', { ...this.player(), tableName: this.tableName.trim(), ranked: this.ranked && !!this.user })
     },
     joinTable(table) {
-      if (!this.canSit || !table.open) return
+      if (!this.canSit || !table.open || (table.ranked && !this.user)) return
       this.$emit('join-table', { ...this.player(), table: table.id })
     }
   }
@@ -477,6 +549,153 @@ export default {
   outline: none;
   border-color: var(--gold);
   box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.35);
+}
+
+/* ---------- konto ---------- */
+
+.name-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.guest-links {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.35rem;
+  font-size: 0.82rem;
+}
+
+.link-btn.dark {
+  color: var(--gold-dark);
+}
+
+.account-card {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin: 0 0 1rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--card);
+  border: 1.5px solid var(--edge);
+  border-radius: 10px;
+}
+
+.avatar {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-title);
+  font-size: 1.25rem;
+  font-weight: 900;
+  color: var(--on-accent);
+  background: linear-gradient(180deg, var(--gold-bright), var(--gold));
+  border: 1.5px solid var(--gold-dark);
+  border-radius: 50%;
+}
+
+.account-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.account-login {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-title);
+  font-size: 1.15rem;
+}
+
+.rating-chip {
+  flex: 0 0 auto;
+  padding: 0.1rem 0.6rem;
+  font-family: var(--font-title);
+  font-weight: 700;
+  color: var(--on-accent);
+  background: var(--gold);
+  border-radius: 999px;
+}
+
+.account-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+  font-size: 0.85rem;
+}
+
+.small-btn {
+  padding: 0.3rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.mode-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.6rem;
+  margin-bottom: 0.45rem;
+}
+
+.mode-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  border: 1px solid var(--edge);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mode-switch button {
+  padding: 0.25rem 0.8rem;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--card);
+  border: none;
+  cursor: pointer;
+}
+
+.mode-switch button + button {
+  border-left: 1px solid var(--edge);
+}
+
+.mode-switch button.active {
+  color: var(--on-accent);
+  background: var(--gold);
+}
+
+.mode-switch button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.mode-hint {
+  flex: 1 1 10rem;
+  min-width: 0;
+  font-size: 0.75rem;
+  line-height: 1.25;
+  color: var(--ink-soft);
+}
+
+.ranked-chip {
+  flex: 0 0 auto;
+  padding: 0 0.45rem;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 800;
+  line-height: 1.55;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--on-accent);
+  background: var(--gold);
+  border-radius: 999px;
 }
 
 .gods-header,
@@ -1026,6 +1245,20 @@ export default {
 @media (max-width: 600px) {
   .create-form {
     flex-wrap: wrap;
+  }
+
+  /* login i ranking w pierwszym wierszu, przyciski konta pod spodem */
+  .account-card {
+    flex-wrap: wrap;
+  }
+
+  .account-text {
+    flex: 1;
+  }
+
+  .account-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 
   .create-btn {

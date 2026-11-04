@@ -32,6 +32,10 @@ coverage
 *.tsbuildinfo
 *.pyc
 __pycache__/
+# baza z kontami i wynikami (python main.py u siebie)
+backend/orlog.db*
 test*
 !backend/tests/
 !backend/tests/**
+# negacja wyżej wpuszcza wszystko z backend/tests, ale bez skompilowanych plików
+backend/tests/__pycache__/

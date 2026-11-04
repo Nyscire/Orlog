@@ -219,12 +219,20 @@ export const pl = {
     finished: '{players} · koniec partii',
     needSetup: 'Wpisz imię i wybierz bogów, żeby usiąść przy stole.',
     full: 'Na serwerze jest już komplet stołów ({max}). Dosiądź się do któregoś z listy.',
-    leave: 'Wstań od stołu'
+    leave: 'Wstań od stołu',
+    mode: 'Rodzaj partii',
+    normal: 'Normalna',
+    ranked: 'Rankingowa',
+    normalHint: 'Bez wpływu na ranking. Mogą się dosiąść także goście.',
+    rankedHint: 'Wynik zmienia ranking obu graczy. Tylko dla zalogowanych.',
+    rankedLogin: 'Partie rankingowe są dla zalogowanych graczy.',
+    loginToJoin: 'Dla zalogowanych'
   },
 
   board: {
     selfOffline: 'Utracono połączenie z serwerem. Próbuję połączyć ponownie…',
     opponentOffline: 'jest offline. Gra poczeka, aż przeciwnik wróci. Możesz też wstać od stołu.',
+    opponentOfflineRanked: 'jest offline. Jeśli nie wróci w ciągu {s} s, wygrywasz walkowerem.',
     endGame: 'Wstań od stołu'
   },
 
@@ -245,6 +253,8 @@ export const pl = {
     settings: 'Ustawienia',
     leave: 'Wstań od stołu',
     leaveConfirm: 'Wstać od stołu? Partia się zakończy.',
+    leaveConfirmRanked: 'Wyjście z partii rankingowej to przegrana walkowerem. Wstać?',
+    ratingChange: 'Ranking: {before} → {after} ({delta})',
     leaveYes: 'Tak, wstań',
     tableCode: 'Kod stołu: {code}',
     no: 'Nie',
@@ -386,7 +396,8 @@ export const pl = {
           : `Obrona blokuje wszystko, ${p.defender} ma nadal ${p.hp} HP.`
         return `${p.attacker} atakuje: ${parts.join(', ')}. ${outcome}`
       },
-      win: p => `Koniec gry. Wygrywa ${p.winner}.`
+      win: p => `Koniec gry. Wygrywa ${p.winner}.`,
+      forfeit: p => `${p.loser} opuszcza partię. Walkower, wygrywa ${p.winner}.`
     }
   },
 
@@ -447,6 +458,81 @@ export const pl = {
     }
   },
 
+  account: {
+    login: 'Zaloguj się',
+    register: 'Załóż konto',
+    loginTitle: 'Logowanie',
+    registerTitle: 'Nowe konto',
+    registerLead: 'Na koncie zapisują się Twoje wyniki, historia partii i statystyki bogów, a do tego możesz grać partie rankingowe.',
+    loginOrEmail: 'Login albo e-mail',
+    loginLabel: 'Login',
+    loginHint: '3–20 znaków: litery, cyfry, kropka, myślnik, podkreślnik. Widzą go inni gracze.',
+    email: 'E-mail',
+    emailHint: 'Tylko do odzyskania hasła, nikt go nie zobaczy.',
+    password: 'Hasło',
+    passwordRepeat: 'Powtórz hasło',
+    passwordMismatch: 'Hasła się różnią.',
+    newPassword: 'Nowe hasło',
+    loginButton: 'Zaloguj się',
+    registerButton: 'Załóż konto',
+    wait: 'Chwila…',
+    forgot: 'Nie pamiętasz hasła?',
+    noAccount: 'Nie masz konta? Załóż je',
+    haveAccount: 'Masz już konto? Zaloguj się',
+    resetTitle: 'Nowe hasło',
+    resetLead: 'Podaj login albo e-mail konta. Wyślemy na e-mail sześciocyfrowy kod, którym ustawisz nowe hasło.',
+    sendCode: 'Wyślij kod',
+    codeSent: 'Jeśli takie konto istnieje, kod jest już w drodze na jego e-mail (zajrzyj też do spamu). Kod działa przez 15 minut.',
+    code: 'Kod z e-maila',
+    setPassword: 'Ustaw hasło i zaloguj się',
+    resend: 'Wyślij kod jeszcze raz',
+    backToLogin: 'Wróć do logowania',
+    signedInAs: 'Zalogowany jako',
+    profile: 'Profil',
+    logout: 'Wyloguj',
+    expired: 'Sesja wygasła. Zaloguj się ponownie, żeby grać na swoim koncie.'
+  },
+
+  profile: {
+    myTab: 'Mój profil',
+    playerTab: 'Gracz {name}',
+    loading: 'Wczytuję…',
+    missing: 'Nie ma gracza {name}.',
+    since: 'Gra od {date}',
+    position: ({ n }) => `${n}. miejsce w rankingu`,
+    noRanked: 'jeszcze bez partii rankingowych',
+    peak: 'najwyżej {n}',
+    games: 'Partie',
+    wins: 'Wygrane',
+    losses: 'Przegrane',
+    winRate: 'Skuteczność',
+    ranked: 'Rankingowe',
+    normal: 'Normalne',
+    record: ({ games, wins, losses }) => `${games} (${wins}–${losses})`,
+    godsTitle: 'Bogowie',
+    gamesShort: ({ n }) => `${n} ${plural(n, ['partia', 'partie', 'partii'])}`,
+    godRecord: 'Wygrane: {wins} z {games}',
+    historyTitle: 'Ostatnie partie',
+    noGames: 'Jeszcze żadnej partii.',
+    win: 'Wygrana',
+    loss: 'Przegrana',
+    vs: 'vs',
+    guest: 'gość',
+    forfeit: 'walkower',
+    rounds: ({ n }) => `${n} ${plural(n, ['runda', 'rundy', 'rund'])}`,
+    more: 'Pokaż starsze'
+  },
+
+  ranking: {
+    title: 'Ranking',
+    lead: 'Ranking zmieniają tylko partie rankingowe. Każdy zaczyna z 1000 punktami, a wygrana z mocniejszym rywalem daje więcej.',
+    empty: 'Nikt jeszcze nie rozegrał partii rankingowej.',
+    player: 'Gracz',
+    rating: 'Ranking',
+    record: 'W–P',
+    games: 'Partie'
+  },
+
   update: {
     readyTitle: 'Nowa wersja {version} jest gotowa',
     readyText: 'Zainstaluje się przy zamknięciu gry albo teraz, po ponownym uruchomieniu.',
@@ -491,6 +577,20 @@ export const pl = {
     invalid_table_name: 'Nieprawidłowa nazwa stołu.',
     seat_not_found: 'Twoje miejsce przy stole wygasło. Wybierz stół z listy.',
     seat_taken_over: 'Grasz teraz w innej karcie albo oknie.',
+    opponent_forfeit: '{name} opuszcza partię rankingową, więc wygrywasz walkowerem. Poczekaj na nowego rywala albo wróć do listy stołów.',
+    login_invalid: 'Login musi mieć od {min} do {max} znaków: litery, cyfry, kropkę, myślnik albo podkreślnik.',
+    login_taken: 'Ten login jest już zajęty.',
+    email_invalid: 'To nie wygląda na adres e-mail.',
+    email_taken: 'Na ten e-mail jest już konto. Możesz odzyskać do niego hasło.',
+    password_too_short: 'Hasło musi mieć co najmniej {min} znaków.',
+    password_too_long: 'Hasło może mieć najwyżej {max} znaków.',
+    bad_credentials: 'Nieprawidłowy login lub hasło.',
+    too_many_attempts: 'Za dużo nieudanych prób. Spróbuj ponownie za {minutes} min.',
+    reset_code_invalid: 'Kod jest nieprawidłowy albo wygasł. Wyślij nowy.',
+    leave_table_first: 'Najpierw wstań od stołu.',
+    ranked_login_required: 'Partie rankingowe są tylko dla zalogowanych graczy.',
+    name_reserved: 'Ta nazwa należy do zarejestrowanego gracza. Jeśli to Ty, zaloguj się.',
+    account_busy: 'Grasz już tym kontem przy innym stole albo w innym oknie.',
     unknown: 'Coś poszło nie tak ({code}).'
   }
 }

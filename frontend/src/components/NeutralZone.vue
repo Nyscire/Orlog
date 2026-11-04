@@ -6,6 +6,7 @@
           {{ stageText }}<span v-if="round && stage !== 'waiting'"> · {{ $t('neutral.round', { n: round }) }}</span>
         </div>
         <span v-if="table" class="table-label" :title="$t('neutral.tableCode', { code: table.id })">
+          <span v-if="table.ranked" class="ranked-chip">{{ $t('lobby.ranked') }}</span>
           {{ table.name || $t('lobby.defaultName', { host: table.host }) }} <span class="table-code">#{{ table.id }}</span>
         </span>
       </div>
@@ -29,7 +30,7 @@
           </button>
         </template>
         <span v-else class="leave-confirm">
-          {{ $t('neutral.leaveConfirm') }}
+          {{ rankedInProgress ? $t('neutral.leaveConfirmRanked') : $t('neutral.leaveConfirm') }}
           <button class="help-btn danger" @click="$emit('leave')">{{ $t('neutral.leaveYes') }}</button>
           <button class="help-btn" @click="confirmLeave = false">{{ $t('neutral.no') }}</button>
         </span>
@@ -81,6 +82,9 @@
     <div class="instructions">
       <div v-if="stage === 'finished'" class="instruction-text game-over">
         <span>{{ winner === player.name ? $t('neutral.youWin') : $t('neutral.winnerIs', { name: winner }) }}</span>
+        <span v-if="myRating" class="rating-change" :class="{ up: myRating.after > myRating.before }">
+          {{ $t('neutral.ratingChange', { before: myRating.before, after: myRating.after, delta: signed(myRating.after - myRating.before) }) }}
+        </span>
         <button class="btn btn-gold new-game-button" @click="$emit('new-game')">{{ $t('neutral.newGame') }}</button>
       </div>
       <div v-else-if="instruction" class="instruction-text">{{ instruction }}</div>
@@ -108,8 +112,13 @@ export default {
     activePlayer: String,
     winner: String,
     round: Number,
-    // stół, przy którym toczy się partia: { id, name, host }
+    // stół, przy którym toczy się partia: { id, name, host, ranked }
     table: {
+      type: Object,
+      default: null
+    },
+    // zmiany rankingu po partii rankingowej: { imię: { before, after } }
+    result: {
       type: Object,
       default: null
     },
@@ -138,6 +147,12 @@ export default {
     }
   },
   computed: {
+    rankedInProgress() {
+      return !!this.table?.ranked && !['waiting', 'finished'].includes(this.stage)
+    },
+    myRating() {
+      return this.result?.[this.player.name] || null
+    },
     // 'opponent_dice' (Loki), 'any_dice' (Frigg) albo null
     targetMode() {
       const needs = this.pick?.level ? this.pick.needs : null
@@ -172,6 +187,11 @@ export default {
         'stage-battle': this.stage === 'battle',
         'stage-finished': this.stage === 'finished'
       }
+    }
+  },
+  methods: {
+    signed(n) {
+      return n > 0 ? `+${n}` : String(n)
     }
   }
 }
@@ -421,11 +441,37 @@ export default {
   font-weight: 500;
 }
 
+.ranked-chip {
+  margin-right: 0.3rem;
+  padding: 0 0.45rem;
+  font-family: system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  line-height: 1.6;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+  color: var(--on-accent);
+  background: var(--gold);
+  border-radius: 999px;
+}
+
+.rating-change {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--blood);
+}
+
+.rating-change.up {
+  color: var(--moss);
+}
+
 .game-over {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
   font-family: var(--font-title);
   font-size: 1.2rem;
   font-weight: 900;

@@ -217,7 +217,8 @@ class TestLobbyData(TablesTestCase):
         data = self.tm.lobby_data()
         self.assertEqual([t["id"] for t in data["tables"]], [free.table_id, busy.id])
         self.assertEqual(data["tables"][0], {"id": free.table_id, "name": "Szybka partia", "host": "C1",
-                                             "players": ["C1"], "stage": "waiting", "round": 1, "open": True})
+                                             "players": ["C1"], "ratings": {}, "stage": "waiting", "round": 1,
+                                             "ranked": False, "open": True})
         self.assertEqual(data["tables"][1]["players"], ["A1", "B1"])
         self.assertFalse(data["tables"][1]["open"])
         self.assertEqual(len(data["gods"]), 20)
@@ -226,9 +227,180 @@ class TestLobbyData(TablesTestCase):
     def test_state_carries_table_info(self):
         table = self.play_pair()
         state = self.tm.state(table)
-        self.assertEqual(state["table"], {"id": table.id, "name": None, "host": "Astrid"})
+        self.assertEqual(state["table"], {"id": table.id, "name": None, "host": "Astrid",
+                                          "ranked": False, "forfeit_grace": None})
         self.assertEqual(state["stage"], "dice")
         self.assertTrue(all(p["connected"] for p in state["players"]))
+        self.assertEqual([(p["account"], p["rating"]) for p in state["players"]], [(False, None), (False, None)])
+        self.assertIsNone(state["result"])
+
+
+class RankedTestCase(unittest.TestCase):
+    """Stoły rankingowe, konta przy stole i zapis wyników (zamiast bazy: lista wyników)."""
+
+    def setUp(self):
+        self.clock = Clock()
+        self.results = []
+        self.registered = {"astrid", "bjorn", "cyra"}
+
+        def recorder(result):
+            self.results.append(result)
+            if not result["ranked"]:
+                return {}
+            return {p["name"]: {"before": 1000, "after": 1016 if p["won"] else 984} for p in result["players"]}
+
+        self.tm = TableManager(rng=random.Random(1), clock=self.clock,
+                               reserved=lambda name: name.casefold() in self.registered, recorder=recorder)
+        self.users = {name: {"id": i + 1, "login": name, "rating": 1000}
+                      for i, name in enumerate(("Astrid", "Bjorn", "Cyra"))}
+
+    def code(self, err):
+        return err.exception.to_dict()["code"]
+
+    def ranked_pair(self, a="Astrid", b="Bjorn"):
+        seat = self.tm.create_table("s1", None, ["Thor"], None, True, self.users[a])
+        self.tm.join_table("s2", seat.table_id, None, ["Loki"], self.users[b])
+        return self.tm.tables[seat.table_id]
+
+    def finish(self, table, loser):
+        table.game.players[loser].hp = 0
+        table.game._check_winner()
+        self.tm.after_action(table)
+
+
+class TestRankedSeats(RankedTestCase):
+    def test_ranked_tables_need_an_account(self):
+        with self.assertRaises(GameError) as err:
+            self.tm.create_table("s1", "Gość", None, None, True)
+        self.assertEqual(self.code(err), "ranked_login_required")
+        seat = self.tm.create_table("s1", None, None, None, True, self.users["Astrid"])
+        with self.assertRaises(GameError) as err:
+            self.tm.join_table("s2", seat.table_id, "Gość")
+        self.assertEqual(self.code(err), "ranked_login_required")
+        self.assertTrue(self.tm.lobby_data()["tables"][0]["ranked"])
+
+    def test_account_plays_under_its_login(self):
+        seat = self.tm.create_table("s1", "Inne imię", None, None, False, self.users["Astrid"])
+        self.assertEqual(seat.name, "Astrid")
+        self.assertEqual((seat.user_id, seat.rating), (1, 1000))
+        with self.assertRaises(GameError) as err:
+            self.tm.create_table("s2", None, None, None, False, self.users["Astrid"])
+        self.assertEqual(self.code(err), "account_busy")
+
+    def test_guests_cannot_use_registered_names(self):
+        with self.assertRaises(GameError) as err:
+            self.tm.create_table("s1", " ASTRID ")
+        self.assertEqual(self.code(err), "name_reserved")
+        self.assertEqual(self.tm.create_table("s1", "Gunnar").name, "Gunnar")
+
+    def test_guest_and_account_can_play_normal_games(self):
+        seat = self.tm.create_table("s1", "Gunnar")
+        self.tm.join_table("s2", seat.table_id, None, None, self.users["Astrid"])
+        table = self.tm.tables[seat.table_id]
+        self.assertEqual(table.stage, "dice")
+        state = self.tm.state(table)
+        self.assertEqual({p["name"]: (p["account"], p["rating"]) for p in state["players"]},
+                         {"Gunnar": (False, None), "Astrid": (True, None)})
+        self.assertEqual(self.tm.lobby_data()["tables"][0]["ratings"], {"Astrid": 1000})
+
+
+class TestResults(RankedTestCase):
+    def test_finished_game_is_recorded_once(self):
+        table = self.ranked_pair()
+        self.finish(table, "Bjorn")
+        self.tm.after_action(table)
+        self.assertEqual(len(self.results), 1)
+        result = self.results[0]
+        self.assertEqual((result["ranked"], result["forfeit"]), (True, False))
+        self.assertEqual([(p["name"], p["user_id"], p["won"], p["gods"]) for p in result["players"]],
+                         [("Astrid", 1, True, ["Thor"]), ("Bjorn", 2, False, ["Loki"])])
+        state = self.tm.state(table)
+        self.assertEqual(state["result"]["Astrid"], {"before": 1000, "after": 1016})
+        self.assertEqual({p["name"]: p["rating"] for p in state["players"]}, {"Astrid": 1016, "Bjorn": 984})
+        self.assertEqual(self.tm.pop_rating_changes(), {"Astrid": 1016, "Bjorn": 984})
+        self.assertEqual(self.tm.pop_rating_changes(), {})
+
+    def test_rematch_is_recorded_again(self):
+        table = self.ranked_pair()
+        self.finish(table, "Bjorn")
+        table.game.rematch()
+        self.tm.after_action(table)
+        self.assertIsNone(self.tm.state(table)["result"])
+        self.finish(table, "Astrid")
+        self.assertEqual(len(self.results), 2)
+
+    def test_leaving_a_ranked_game_is_a_forfeit(self):
+        table = self.ranked_pair()
+        self.tm.leave("s2")
+        self.assertEqual(len(self.results), 1)
+        self.assertTrue(self.results[0]["forfeit"])
+        self.assertEqual([(p["name"], p["won"]) for p in self.results[0]["players"]],
+                         [("Astrid", True), ("Bjorn", False)])
+        # zwycięzca czeka przy stole na nowego rywala
+        self.assertEqual(table.stage, "waiting")
+        self.assertEqual(table.notice, {"code": "opponent_forfeit", "params": {"name": "Bjorn"}})
+        self.assertEqual(self.tm.pop_rating_changes(), {"Astrid": 1016, "Bjorn": 984})
+
+    def test_leaving_a_normal_game_records_nothing(self):
+        seat = self.tm.create_table("s1", None, None, None, False, self.users["Astrid"])
+        self.tm.join_table("s2", seat.table_id, None, None, self.users["Bjorn"])
+        self.tm.leave("s2")
+        self.assertEqual(self.results, [])
+        self.assertEqual(self.tm.tables[seat.table_id].notice["code"], "player_left")
+
+    def test_leaving_after_the_end_records_nothing_more(self):
+        table = self.ranked_pair()
+        self.finish(table, "Bjorn")
+        self.tm.leave("s2")
+        self.assertEqual(len(self.results), 1)
+
+    def test_offline_player_loses_ranked_game_after_grace(self):
+        table = self.ranked_pair()
+        self.tm.disconnect("s2")
+        self.clock.now += TableManager.RANKED_FORFEIT_GRACE - 1
+        self.assertEqual(self.tm.sweep(), ([], False))
+        self.clock.now += 1
+        changed, list_changed = self.tm.sweep()
+        self.assertEqual((changed, list_changed), ([table], True))
+        self.assertEqual(table.stage, "finished")
+        self.assertEqual(table.game.winner.name, "Astrid")
+        self.assertTrue(self.results[0]["forfeit"])
+        self.assertEqual(table.game.log[-1]["type"], "forfeit")
+        # wraca już po wszystkim i widzi wynik
+        self.tm.resume("s3", "Bjorn", self.tm.seats["Bjorn"].token)
+        self.assertEqual(self.tm.sweep(), ([], False))
+        self.assertEqual(len(self.results), 1)
+
+    def test_normal_games_have_no_forfeit_timer(self):
+        seat = self.tm.create_table("s1", None, None, None, False, self.users["Astrid"])
+        self.tm.join_table("s2", seat.table_id, None, None, self.users["Bjorn"])
+        self.tm.disconnect("s2")
+        self.clock.now += TableManager.RANKED_FORFEIT_GRACE * 2
+        self.tm.sweep()
+        self.assertEqual(self.tm.tables[seat.table_id].stage, "dice")
+        self.assertEqual(self.results, [])
+
+    def test_both_offline_ranked_game_is_just_removed(self):
+        table = self.ranked_pair()
+        self.tm.disconnect("s1")
+        self.tm.disconnect("s2")
+        self.clock.now += TableManager.ABANDONED_GRACE
+        self.tm.sweep()
+        self.assertNotIn(table.id, self.tm.tables)
+        self.assertEqual(self.results, [])
+
+    def test_storage_error_does_not_stop_the_game(self):
+        def broken(result):
+            raise RuntimeError("baza padła")
+        self.tm.recorder = broken
+        table = self.ranked_pair()
+        with self.assertLogs("tables", level="ERROR"):
+            self.finish(table, "Bjorn")
+        self.assertEqual(table.stage, "finished")
+        self.assertIsNone(self.tm.state(table)["result"])
+        table.game.rematch()
+        self.tm.after_action(table)
+        self.assertEqual(table.stage, "dice")
 
 
 if __name__ == "__main__":

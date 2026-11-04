@@ -10,6 +10,11 @@ Wants=network-online.target
 [Service]
 User=orlog
 WorkingDirectory=/opt/orlog/backend
+# konta i wyniki partii; systemd sam zakłada /var/lib/orlog z prawami dla użytkownika orlog
+StateDirectory=orlog
+Environment=ORLOG_DB=/var/lib/orlog/orlog.db
+# poczta do resetu hasła: ORLOG_SMTP_HOST, ORLOG_SMTP_USER itd. w /etc/orlog.env (opcjonalnie)
+EnvironmentFile=-/etc/orlog.env
 # jeden proces, bo stoły są w pamięci; wątki obsługują połączenia graczy
 ExecStart=/opt/orlog/venv/bin/gunicorn --workers 1 --threads 200 --bind 0.0.0.0:5000 main:app
 Restart=on-failure

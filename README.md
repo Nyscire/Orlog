@@ -14,6 +14,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
+Konta graczy i wyniki partii zapisują się w `backend/orlog.db` (zob. „Konta i ranking”).
+
 Frontend w przeglądarce:
 
 ```bash
@@ -108,7 +110,7 @@ Instalatory nie są podpisane, więc Windows przy pierwszym uruchomieniu pokaże
 
 ## Serwer w internecie
 
-Serwer trzyma stoły w pamięci, więc zawsze działa jako jeden proces (`--workers 1`), a połączenia graczy obsługują wątki. Port 5000 musi być otwarty w zaporze. `GET /health` zwraca stan serwera (liczbę stołów i graczy).
+Serwer trzyma stoły w pamięci, więc zawsze działa jako jeden proces (`--workers 1`), a połączenia graczy obsługują wątki. Konta i wyniki partii są w pliku bazy SQLite (zob. „Konta i ranking”). Port 5000 musi być otwarty w zaporze. `GET /health` zwraca stan serwera (liczbę stołów i graczy).
 
 Najprościej w Dockerze (z katalogu głównego repo):
 
@@ -131,7 +133,7 @@ W aplikacji wpisuje się wtedy adres serwera, np. `1.2.3.4` albo `http://1.2.3.4
 
 ## Zasady w skrócie
 
-- Przed grą każdy wpisuje imię, wybiera do 3 z 20 bogów, a potem zakłada stół albo dosiada się do wolnego stołu z listy. Partia zaczyna się, gdy przy stole siedzi dwóch graczy.
+- Przed grą każdy wpisuje imię (albo się loguje), wybiera do 3 z 20 bogów, a potem zakłada stół albo dosiada się do wolnego stołu z listy. Partia zaczyna się, gdy przy stole siedzi dwóch graczy.
 - Gracze na zmianę rzucają kośćmi i odkładają te, które chcą zatrzymać. Każdy ma 3 rzuty, w ostatnim zostają wszystkie kości.
 - Po rzutach liczy się mana: każda kość z monetą w rogu daje 1 manę, a każda ręka kradnie przeciwnikowi 1 manę (jeśli ją ma).
 - Potem każdy wybiera łaskę boga (albo ją pomija). Frigg i Loki wskazują kości na stole, a Odyn i Tyr ile HP poświęcić.
@@ -142,7 +144,7 @@ W środku planszy jest dziennik z przebiegiem każdej rundy: jakie kości mają 
 
 ## Stoły
 
-Serwer prowadzi wiele partii naraz, każdą przy osobnym stole (do 50 stołów). W menu po prawej jest lista stołów: najpierw te z wolnym miejscem (przycisk „Dosiądź się”), potem trwające partie. Stół można nazwać, a bez nazwy wyświetla się jako „Stół gracza X”. Każdy stół ma czteroznakowy kod, widoczny też na planszy. Imię gracza jest unikalne na całym serwerze.
+Serwer prowadzi wiele partii naraz, każdą przy osobnym stole (do 50 stołów). W menu po prawej jest lista stołów: najpierw te z wolnym miejscem (przycisk „Dosiądź się”), potem trwające partie. Stół można nazwać, a bez nazwy wyświetla się jako „Stół gracza X”. Każdy stół ma czteroznakowy kod, widoczny też na planszy. Imię gracza jest unikalne na całym serwerze, a gość nie może zająć loginu zarejestrowanego gracza.
 
 - Po odświeżeniu strony gra sama wraca na twoje miejsce: przy siadaniu serwer daje token, który zostaje w przeglądarce. Otwarcie gry w drugiej karcie przenosi miejsce do nowej karty.
 - „Wstań od stołu” kończy partię. Przeciwnik zostaje przy stole i czeka na nowego rywala, a stół znów pojawia się na liście jako wolny.
@@ -151,7 +153,40 @@ Serwer prowadzi wiele partii naraz, każdą przy osobnym stole (do 50 stołów).
 
 Stołami zarządza `TableManager` w `backend/tables.py` (bez Socket.IO, więc łatwo go testować). `backend/main.py` tylko tłumaczy zdarzenia Socket.IO na jego metody. Każdy stół to pokój Socket.IO, więc stan gry dostają tylko gracze przy tym stole, a listę stołów wszyscy.
 
-Zdarzenia od klienta: `get_tables`, `create_table {name, gods, table_name}`, `join_table {table, name, gods}`, `resume {name, token}`, `leave_table`, a w trakcie gry `confirm_dice`, `choose_god`, `new_game`. Serwer wysyła `tables`, `seated {name, token, table}`, `game_state` (z polami `table` i `notice`), `join_rejected`, `resume_failed`, `seat_lost` i `error_message`.
+Zdarzenia od klienta: `get_tables`, `create_table {name, gods, table_name, ranked}`, `join_table {table, name, gods}`, `resume {name, token}`, `leave_table`, a w trakcie gry `confirm_dice`, `choose_god`, `new_game`. Serwer wysyła `tables`, `seated {name, token, table}`, `game_state` (z polami `table`, `notice` i `result`), `join_rejected`, `resume_failed`, `seat_lost` i `error_message`.
+
+## Konta i ranking
+
+Konto jest opcjonalne. Gość wpisuje imię i gra jak dotąd, ale tylko partie normalne i nic mu się nie zapisuje. Konto zakłada się w menu („Załóż konto”): login (widzą go inni), e-mail (tylko do odzyskania hasła) i hasło. Zalogowany gracz:
+
+- gra pod swoim loginem, a w menu widzi swój ranking,
+- może zakładać stoły rankingowe i do nich dosiadać (przełącznik „Normalna / Rankingowa” nad nazwą stołu); na liście takie stoły mają złotą plakietkę i ranking graczy,
+- ma profil („Profil” w menu): bilans wygranych i przegranych (osobno rankingowe i normalne), ranking i miejsce, najwyższy ranking, statystyki bogów (ile partii każdym i jak często wygrywa) i historię partii z przeciwnikiem, wynikiem, HP i bogami obu stron,
+- widzi ranking wszystkich graczy („Ranking” w stopce menu); z rankingu i historii można przejść do profilu innego gracza.
+
+Zapisują się wszystkie partie, w których gra choć jedno konto. Ranking (Elo, start 1000, K = 32) zmieniają tylko partie rankingowe: wygrana z mocniejszym rywalem daje więcej punktów, a zmianę widać na planszy po końcu partii. W partii rankingowej wyjście od stołu w trakcie gry to przegrana walkowerem, a jeśli przeciwnik rozłączy się i nie wróci w ciągu minuty, wygrywasz walkowerem. Partia, w której obaj gracze są offline, przepada bez wyniku.
+
+Zapomniane hasło: „Nie pamiętasz hasła?” w oknie logowania wysyła na e-mail konta sześciocyfrowy kod ważny 15 minut. Po wpisaniu kodu i nowego hasła gracz jest od razu zalogowany, a stare sesje na innych urządzeniach się kończą.
+
+### Po stronie serwera
+
+Konta i partie są w bazie SQLite (`backend/db.py`, schemat i migracje), plik wskazuje zmienna `ORLOG_DB` (domyślnie `backend/orlog.db`). W Dockerze baza leży w wolumenie `orlog-data` (`/data/orlog.db`), a w usłudze systemd w `/var/lib/orlog/orlog.db`. Kopia zapasowa: `sqlite3 orlog.db ".backup kopia.db"` albo skopiowanie pliku przy zatrzymanym serwerze.
+
+Hasła są zapisane jako skrót scrypt, a sesje jako skrót tokenu, więc z samej bazy nie da się zalogować na cudze konto. Po 10 błędnych hasłach konto jest blokowane na 15 minut. Hasło idzie do serwera tym samym połączeniem co gra, więc na serwerze dostępnym z internetu warto mieć HTTPS (Caddy, zob. niżej).
+
+Kody do resetu hasła wysyła serwer pocztowy ustawiony zmiennymi środowiskowymi:
+
+| zmienna | znaczenie |
+| --- | --- |
+| `ORLOG_SMTP_HOST` | serwer SMTP, np. `smtp.gmail.com` |
+| `ORLOG_SMTP_PORT` | domyślnie 587 (465 przy `ssl`) |
+| `ORLOG_SMTP_SECURITY` | `starttls` (domyślnie), `ssl` albo `none` |
+| `ORLOG_SMTP_USER`, `ORLOG_SMTP_PASSWORD` | login i hasło do skrzynki (w Gmailu hasło do aplikacji) |
+| `ORLOG_SMTP_FROM` | nadawca, domyślnie `ORLOG_SMTP_USER` |
+
+W Dockerze są w `deploy/docker-compose.yml` (zakomentowane), a w systemd w pliku `/etc/orlog.env`. Bez `ORLOG_SMTP_HOST` mail z kodem trafia do logu serwera (`docker compose logs orlog` albo `journalctl -u orlog`), więc można przekazać kod graczowi samemu.
+
+Kod: `backend/accounts.py` (rejestracja, logowanie, sesje, reset hasła), `backend/stats.py` (zapis partii, Elo, profil, ranking), `backend/mailer.py` (poczta). `TableManager` nie wie nic o bazie: dostaje funkcję zapisu skończonej partii (`recorder`) i funkcję sprawdzającą zajęte loginy (`reserved`). Aplikacja trzyma token sesji w `localStorage` i wysyła go przy każdym połączeniu Socket.IO (`auth`), więc po odświeżeniu gracz od razu jest zalogowany. Zdarzenia: `register`, `login`, `logout`, `reset_request`, `reset_confirm`, `get_profile`, `get_history`, `get_ranking`; serwer odpowiada `account`, `account_error`, `reset_sent`, `profile`, `history` i `ranking`.
 
 ## Ustawienia
 

@@ -4,6 +4,7 @@
       <div class="stats-section">
         <PlayerStats 
           :name="opponent.name" 
+          :rating="opponent.rating ?? null"
           :hp="opponent.HP" 
           :mana="opponent.Mana" 
         />

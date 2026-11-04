@@ -122,6 +122,16 @@ class Game:
         self.log = []
         self._begin_round()
 
+    def forfeit(self, name: str) -> bool:
+        """Walkower: gracz wyszedł z trwającej partii albo do niej nie wrócił. Wygrywa przeciwnik."""
+        if self.stage in ("waiting", "finished") or name not in self.players:
+            return False
+        self.winner = self.opponent_of(self.players[name])
+        self.stage = "finished"
+        self.active_player = None
+        self._log("forfeit", "win", loser=name, winner=self.winner.name)
+        return True
+
     # ---------- rundy ----------
 
     def _begin_round(self) -> None:
